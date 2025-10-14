@@ -61,31 +61,28 @@ const handler = async (req: Request): Promise<Response> => {
 
     // Send email with verification code
     const emailResponse = await resend.emails.send({
-      from: "JURIST MIND <onboarding@resend.dev>",
+      from: "JuristMind <joy@auth.juristmind.com>",
       to: [email],
-      subject: "Your JURIST MIND Verification Code",
+      subject: "Your JuristMind Verification Code",
       html: `
-        <div style="max-width: 600px; margin: 0 auto; padding: 20px; font-family: Arial, sans-serif;">
-          <h1 style="color: #333; text-align: center;">JURIST MIND</h1>
-          <h2 style="color: #666; text-align: center;">Email Verification</h2>
+        <div style="max-width: 600px; margin: 0 auto; padding: 20px; font-family: Arial, sans-serif; color: #111;">
+          <h2 style="color: #333; text-align: center;">Verify Your Email for JuristMind</h2>
           
-          <p>Hello,</p>
+          <p>Hello${userData?.displayName ? ` ${userData.displayName}` : ''},</p>
           
-          <p>Thank you for signing up with JURIST MIND. Please use the following verification code to complete your registration:</p>
+          <p>To complete your registration on chat.juristmind.com, use this verification code:</p>
           
-          <div style="background-color: #f5f5f5; padding: 20px; text-align: center; margin: 20px 0; border-radius: 8px;">
-            <h1 style="color: #333; font-size: 32px; margin: 0; letter-spacing: 8px;">${code}</h1>
+          <div style="background-color: #f0f0f0; padding: 16px; text-align: center; margin: 20px 0; border-radius: 8px;">
+            <div style="font-size: 32px; font-weight: bold; letter-spacing: 8px; color: #333;">${code}</div>
           </div>
           
-          <p>This verification code will expire in 10 minutes for security purposes.</p>
+          <p style="color: #666;">This code expires in 10 minutes. If you didn't request this, please ignore it.</p>
           
-          <p>If you didn't request this verification code, please ignore this email.</p>
-          
-          <p>Best regards,<br>The JURIST MIND Team</p>
+          <p>Best,<br><strong>JuristMind Team</strong></p>
           
           <hr style="margin: 30px 0; border: none; border-top: 1px solid #eee;">
           <p style="color: #999; font-size: 12px; text-align: center;">
-            This is an automated message. Please do not reply to this email.
+            This is an automated message from JuristMind. Please do not reply to this email.
           </p>
         </div>
       `,
