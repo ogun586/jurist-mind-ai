@@ -25,14 +25,43 @@ export function ChatInterface() {
   const { user } = useAuth();
   const { toast } = useToast();
 
-  // Check for session ID in URL params on component mount
+  // Load session from URL or most recent session on mount
   useEffect(() => {
+    if (!user) return;
+    
     const urlParams = new URLSearchParams(window.location.search);
     const sessionId = urlParams.get('session');
-    if (sessionId && user) {
+    
+    if (sessionId) {
       loadSession(sessionId);
+    } else {
+      // Auto-load most recent session if no session in URL
+      loadMostRecentSession();
     }
   }, [user]);
+
+  const loadMostRecentSession = async () => {
+    if (!user) return;
+    
+    try {
+      const { data, error } = await supabase
+        .from('chat_sessions')
+        .select('id')
+        .eq('user_id', user.id)
+        .order('updated_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (error) throw error;
+      
+      if (data) {
+        await loadSession(data.id);
+      }
+    } catch (error) {
+      console.error('Error loading recent session:', error);
+      // Silently fail - user can start a new chat
+    }
+  };
 
   const createNewSession = async () => {
     if (!user) return null;
@@ -57,15 +86,30 @@ export function ChatInterface() {
 
   const saveMessage = async (sessionId: string, content: string, sender: 'user' | 'ai') => {
     try {
-      await supabase
+      const { error } = await supabase
         .from('chat_messages')
         .insert({
           session_id: sessionId,
           content,
           sender
         });
+      
+      if (error) throw error;
+      
+      // Also update the session's updated_at timestamp
+      await supabase
+        .from('chat_sessions')
+        .update({ updated_at: new Date().toISOString() })
+        .eq('id', sessionId);
+        
+      console.log('Message saved successfully:', sender, content.substring(0, 50));
     } catch (error) {
       console.error('Error saving message:', error);
+      toast({
+        title: "Warning",
+        description: "Message may not have been saved",
+        variant: "destructive",
+      });
     }
   };
 
@@ -188,6 +232,13 @@ export function ChatInterface() {
 
       if (error) throw error;
       
+      if (!data || data.length === 0) {
+        console.log('No messages found for session:', sessionId);
+        setMessages([]);
+        setCurrentSessionId(sessionId);
+        return;
+      }
+      
       const loadedMessages: Message[] = data.map((msg, index) => ({
         id: `${sessionId}-${index}`,
         content: msg.content,
@@ -198,6 +249,7 @@ export function ChatInterface() {
       
       setMessages(loadedMessages);
       setCurrentSessionId(sessionId);
+      console.log('Loaded', loadedMessages.length, 'messages for session:', sessionId);
     } catch (error) {
       console.error('Error loading session:', error);
       toast({
