@@ -46,6 +46,9 @@ verify_jwt = true
 [functions.manage-marketplace]
 verify_jwt = true
 
+[functions.manage-judge-notes]
+verify_jwt = true
+
 [functions.paystack-payment]
 verify_jwt = true
 
@@ -54,6 +57,18 @@ verify_jwt = false
 
 [functions.check-credits]
 verify_jwt = true
+
+[functions.check-ai-usage]
+verify_jwt = true
+
+[functions.increment-ai-usage]
+verify_jwt = true
+
+[functions.send-verification-code]
+verify_jwt = false
+
+[functions.verify-email-code]
+verify_jwt = false
 
 [functions.create-notification]
 verify_jwt = true

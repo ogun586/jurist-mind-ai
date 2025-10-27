@@ -1,64 +1,148 @@
-import { Check, Crown, Zap, Shield } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Check, Zap, Users, Shield, Crown } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
+import { useEffect, useState } from "react";
+import { useToast } from "@/hooks/use-toast";
 
-const plans = [
-  {
-    name: "Basic",
-    price: "₦15,000",
-    period: "/month",
-    description: "Perfect for solo practitioners",
-    features: [
-      "5 AI consultations per day",
-      "Basic legal templates",
-      "Email support",
-      "Case management (up to 10 cases)",
-      "Document storage (1GB)"
-    ],
-    popular: false,
-    icon: Shield
-  },
-  {
-    name: "Professional",
-    price: "₦35,000",
-    period: "/month",
-    description: "Ideal for growing law firms",
-    features: [
-      "Unlimited AI consultations",
-      "Premium legal templates",
-      "Priority support",
-      "Case management (up to 50 cases)",
-      "Document storage (10GB)",
-      "Legal research database access",
-      "Court filing assistant",
-      "Client portal"
-    ],
-    popular: true,
-    icon: Crown
-  },
-  {
-    name: "Enterprise",
-    price: "₦75,000",
-    period: "/month",
-    description: "For large law firms and organizations",
-    features: [
-      "Unlimited everything",
-      "Custom legal templates",
-      "24/7 phone support",
-      "Unlimited case management",
-      "Document storage (100GB)",
-      "Advanced analytics",
-      "API access",
-      "Custom integrations",
-      "Dedicated account manager",
-      "Training sessions"
-    ],
-    popular: false,
-    icon: Zap
-  }
-];
+interface Plan {
+  id: string;
+  plan_key: string;
+  name: string;
+  description: string;
+  price_ngn: number;
+  duration_days: number;
+  features: string[];
+  daily_request_limit: number | null;
+  monthly_points: number | null;
+}
+
+interface UserPlan {
+  plan_key: string;
+  name: string;
+  is_active: boolean;
+  days_remaining: number;
+}
 
 export default function Upgrade() {
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const [plans, setPlans] = useState<Plan[]>([]);
+  const [userPlan, setUserPlan] = useState<UserPlan | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    loadPlans();
+    if (user) loadUserPlan();
+  }, [user]);
+
+  const loadPlans = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('plans')
+        .select('*')
+        .order('price_ngn', { ascending: true });
+
+      if (error) throw error;
+      
+      // Transform data to match our Plan interface
+      const transformedPlans = (data || []).map(plan => ({
+        ...plan,
+        features: Array.isArray(plan.features) ? plan.features as string[] : []
+      }));
+      
+      setPlans(transformedPlans);
+    } catch (error) {
+      console.error('Error loading plans:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load subscription plans",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadUserPlan = async () => {
+    if (!user) return;
+    
+    try {
+      const { data, error } = await supabase.rpc('get_user_plan');
+      if (error) throw error;
+      if (data && typeof data === 'object' && !Array.isArray(data)) {
+        setUserPlan(data as unknown as UserPlan);
+      }
+    } catch (error) {
+      console.error('Error loading user plan:', error);
+    }
+  };
+
+  const handleUpgrade = async (planKey: string, priceNgn: number) => {
+    if (!user) {
+      toast({
+        title: "Authentication Required",
+        description: "Please sign in to upgrade your plan",
+        variant: "destructive",
+      });
+      window.location.href = '/auth';
+      return;
+    }
+
+    if (planKey === 'free') {
+      toast({
+        title: "Already on Free Plan",
+        description: "You're already using the free plan!",
+      });
+      return;
+    }
+
+    try {
+      // Initialize Paystack payment
+      const { data, error } = await supabase.functions.invoke('paystack-payment', {
+        body: {
+          action: 'initialize',
+          amount: priceNgn,
+          payment_type: planKey,
+          callback_url: `${window.location.origin}/upgrade?success=true&plan=${planKey}`
+        }
+      });
+
+      if (error) throw error;
+
+      if (data.authorization_url) {
+        window.location.href = data.authorization_url;
+      }
+    } catch (error: any) {
+      console.error('Payment error:', error);
+      toast({
+        title: "Payment Failed",
+        description: error.message || "Failed to initialize payment",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const getPlanIcon = (planKey: string) => {
+    switch (planKey) {
+      case 'free': return Zap;
+      case 'student_monthly': return Users;
+      case 'monthly': return Shield;
+      case 'yearly': return Shield;
+      case 'enterprise': return Crown;
+      default: return Zap;
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <p className="text-muted-foreground">Loading plans...</p>
+      </div>
+    );
+  }
+
   return (
     <div className="h-full bg-background overflow-y-auto">
       <div className="max-w-6xl mx-auto p-6">
@@ -67,57 +151,83 @@ export default function Upgrade() {
           <p className="text-xl text-muted-foreground">Choose the perfect plan for your legal practice</p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-          {plans.map((plan, index) => (
-            <Card 
-              key={index} 
-              className={`relative hover:shadow-lg transition-shadow ${
-                plan.popular ? 'border-primary shadow-lg' : ''
-              }`}
-            >
-              {plan.popular && (
-                <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                  <span className="bg-primary text-primary-foreground px-4 py-1 rounded-full text-sm font-medium">
-                    Most Popular
-                  </span>
-                </div>
+        {userPlan && userPlan.is_active && (
+          <div className="mb-8 p-4 bg-primary/10 rounded-lg">
+            <p className="text-center">
+              <span className="font-semibold">Current Plan: </span>
+              {userPlan.name} 
+              {userPlan.days_remaining > 0 && (
+                <span className="text-muted-foreground ml-2">
+                  ({Math.floor(userPlan.days_remaining)} days remaining)
+                </span>
               )}
-              
-              <CardHeader className="text-center pb-8">
-                <div className="mx-auto mb-4 w-12 h-12 bg-gradient-primary rounded-lg flex items-center justify-center">
-                  <plan.icon className="w-6 h-6 text-primary-foreground" />
+            </p>
+          </div>
+        )}
+
+        <div className="grid md:grid-cols-3 gap-8 mb-16">
+          {plans.map((plan) => {
+            const Icon = getPlanIcon(plan.plan_key);
+            const isPopular = plan.plan_key === 'monthly';
+            const isCurrent = userPlan?.plan_key === plan.plan_key;
+            
+            return (
+              <Card
+                key={plan.id}
+                className={`p-8 relative ${
+                  isPopular
+                    ? "border-primary shadow-lg scale-105"
+                    : "border-border"
+                }`}
+              >
+                {isPopular && (
+                  <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-primary text-primary-foreground px-4 py-1 rounded-full text-sm font-medium">
+                    Most Popular
+                  </div>
+                )}
+                
+                {isCurrent && (
+                  <div className="absolute -top-4 right-4 bg-green-600 text-white px-3 py-1 rounded-full text-xs font-medium">
+                    Current Plan
+                  </div>
+                )}
+                
+                <div className="text-center mb-6">
+                  <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-primary/10 mb-4">
+                    <Icon className="w-8 h-8 text-primary" />
+                  </div>
+                  <h3 className="text-2xl font-bold mb-2">{plan.name}</h3>
+                  <div className="flex items-baseline justify-center gap-1 mb-2">
+                    <span className="text-4xl font-bold">
+                      ₦{plan.price_ngn.toLocaleString()}
+                    </span>
+                    <span className="text-muted-foreground">
+                      /{plan.duration_days < 100 ? `${plan.duration_days} days` : 'year'}
+                    </span>
+                  </div>
+                  <p className="text-muted-foreground">{plan.description}</p>
                 </div>
-                <CardTitle className="text-2xl font-bold">{plan.name}</CardTitle>
-                <div className="mt-4">
-                  <span className="text-4xl font-bold text-primary">{plan.price}</span>
-                  <span className="text-muted-foreground">{plan.period}</span>
-                </div>
-                <p className="text-muted-foreground mt-2">{plan.description}</p>
-              </CardHeader>
-              
-              <CardContent>
-                <ul className="space-y-3 mb-8">
-                  {plan.features.map((feature, featureIndex) => (
-                    <li key={featureIndex} className="flex items-center gap-3">
-                      <Check className="w-5 h-5 text-primary flex-shrink-0" />
+
+                <ul className="space-y-4 mb-8">
+                  {plan.features.map((feature: string, idx: number) => (
+                    <li key={idx} className="flex items-start gap-3">
+                      <Check className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
                       <span className="text-sm">{feature}</span>
                     </li>
                   ))}
                 </ul>
-                
-                <Button 
-                  className={`w-full ${
-                    plan.popular 
-                      ? 'bg-gradient-primary hover:shadow-glow' 
-                      : ''
-                  }`}
-                  variant={plan.popular ? 'default' : 'outline'}
+
+                <Button
+                  className="w-full"
+                  variant={isPopular ? "default" : "outline"}
+                  onClick={() => handleUpgrade(plan.plan_key, plan.price_ngn)}
+                  disabled={isCurrent}
                 >
-                  {plan.popular ? 'Get Started' : 'Choose Plan'}
+                  {isCurrent ? 'Current Plan' : plan.price_ngn === 0 ? 'Start Free' : 'Upgrade Now'}
                 </Button>
-              </CardContent>
-            </Card>
-          ))}
+              </Card>
+            );
+          })}
         </div>
 
         <div className="mt-16 text-center">

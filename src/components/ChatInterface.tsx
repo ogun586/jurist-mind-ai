@@ -136,6 +136,46 @@ export function ChatInterface() {
       return;
     }
 
+    // Check if user can make request (usage limits)
+    try {
+      const { data: usageCheck, error: usageError } = await supabase.functions.invoke('check-ai-usage');
+      
+      if (usageError || !usageCheck?.allowed) {
+        const reason = usageCheck?.reason || 'Usage limit reached';
+        toast({
+          title: "Usage Limit Reached",
+          description: `${reason} - Upgrade your plan to continue!`,
+          variant: "destructive",
+          action: (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => window.location.href = '/upgrade'}
+            >
+              Upgrade Now
+            </Button>
+          ),
+        });
+        return;
+      }
+
+      // Show remaining requests/points if available
+      if (usageCheck.requests_remaining > 0 && usageCheck.requests_remaining < 10) {
+        toast({
+          title: "Usage Notice",
+          description: `You have ${usageCheck.requests_remaining} requests remaining today`,
+        });
+      }
+    } catch (error) {
+      console.error('Error checking usage:', error);
+      toast({
+        title: "Error",
+        description: "Failed to check usage limits. Please try again.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     let sessionId = currentSessionId;
     
     // Create new session if none exists
@@ -197,6 +237,16 @@ export function ChatInterface() {
       
       // Save AI response
       await saveMessage(sessionId, aiResponse.content, 'ai');
+      
+      // Increment usage count after successful AI response
+      try {
+        await supabase.functions.invoke('increment-ai-usage', {
+          body: { points: 1 }
+        });
+      } catch (error) {
+        console.error('Error incrementing usage:', error);
+        // Don't block the user, just log the error
+      }
       
     } catch (error) {
       console.error('Error calling AI:', error);

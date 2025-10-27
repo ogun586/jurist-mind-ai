@@ -22,6 +22,12 @@ serve(async (req) => {
       }
     );
 
+    // Also create admin client for upgrade operations
+    const supabaseAdmin = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+    );
+
     const { data: { user } } = await supabaseClient.auth.getUser();
     if (!user) throw new Error('Unauthorized');
 
@@ -126,21 +132,31 @@ serve(async (req) => {
 
         if (updateError) throw updateError;
 
-        // If payment successful and it's for premium, update user credits
-        if (transaction.status === 'success' && payment.payment_type === 'premium') {
-          const premiumExpiry = new Date();
-          premiumExpiry.setMonth(premiumExpiry.getMonth() + 1); // 1 month premium
+        // If payment successful, upgrade user plan
+        if (transaction.status === 'success') {
+          // Extract plan_key from payment_type
+          const planKey = payment.payment_type;
+          
+          // Upgrade user plan using our new function
+          const { data: upgradeResult, error: upgradeError } = await supabaseAdmin.rpc('upgrade_user_plan', {
+            p_user_id: user.id,
+            p_plan_key: planKey,
+            p_payment_reference: reference
+          });
 
-          await supabaseClient
-            .from('user_credits')
-            .upsert({
-              user_id: user.id,
-              is_premium: true,
-              premium_expires_at: premiumExpiry.toISOString(),
-              credits_remaining: 999, // Unlimited for premium
-            }, {
-              onConflict: 'user_id'
+          if (upgradeError) {
+            console.error('Error upgrading plan:', upgradeError);
+          } else {
+            console.log('User upgraded successfully:', upgradeResult);
+            
+            // Create notification for user
+            await supabaseAdmin.functions.invoke('create-notification', {
+              body: {
+                title: `🎉 Welcome to ${upgradeResult.plan_name}!`,
+                body: `Your subscription is now active. Enjoy unlimited legal insights!`
+              }
             });
+          }
         }
 
         return new Response(JSON.stringify({

@@ -556,6 +556,48 @@ export type Database = {
         }
         Relationships: []
       }
+      plans: {
+        Row: {
+          created_at: string | null
+          daily_request_limit: number | null
+          description: string | null
+          duration_days: number
+          features: Json | null
+          id: string
+          monthly_points: number | null
+          name: string
+          plan_key: string
+          price_ngn: number
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          daily_request_limit?: number | null
+          description?: string | null
+          duration_days: number
+          features?: Json | null
+          id?: string
+          monthly_points?: number | null
+          name: string
+          plan_key: string
+          price_ngn: number
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          daily_request_limit?: number | null
+          description?: string | null
+          duration_days?: number
+          features?: Json | null
+          id?: string
+          monthly_points?: number | null
+          name?: string
+          plan_key?: string
+          price_ngn?: number
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       products: {
         Row: {
           category: string
@@ -607,6 +649,9 @@ export type Database = {
           email: string | null
           id: string
           phone: string | null
+          plan_expires_at: string | null
+          plan_key: string | null
+          plan_started_at: string | null
           updated_at: string
           user_id: string
           user_type: string | null
@@ -619,6 +664,9 @@ export type Database = {
           email?: string | null
           id?: string
           phone?: string | null
+          plan_expires_at?: string | null
+          plan_key?: string | null
+          plan_started_at?: string | null
           updated_at?: string
           user_id: string
           user_type?: string | null
@@ -631,9 +679,113 @@ export type Database = {
           email?: string | null
           id?: string
           phone?: string | null
+          plan_expires_at?: string | null
+          plan_key?: string | null
+          plan_started_at?: string | null
           updated_at?: string
           user_id?: string
           user_type?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "profiles_plan_key_fkey"
+            columns: ["plan_key"]
+            isOneToOne: false
+            referencedRelation: "plans"
+            referencedColumns: ["plan_key"]
+          },
+        ]
+      }
+      serves: {
+        Row: {
+          created_at: string | null
+          doc_url: string
+          id: number
+          recipient_id: string
+          sender_id: string
+          status: string
+        }
+        Insert: {
+          created_at?: string | null
+          doc_url: string
+          id?: number
+          recipient_id: string
+          sender_id: string
+          status?: string
+        }
+        Update: {
+          created_at?: string | null
+          doc_url?: string
+          id?: number
+          recipient_id?: string
+          sender_id?: string
+          status?: string
+        }
+        Relationships: []
+      }
+      subscriptions: {
+        Row: {
+          amount: number | null
+          created_at: string | null
+          expires_at: string
+          id: string
+          paystack_reference: string | null
+          plan: string
+          started_at: string
+          status: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          amount?: number | null
+          created_at?: string | null
+          expires_at: string
+          id?: string
+          paystack_reference?: string | null
+          plan: string
+          started_at?: string
+          status: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          amount?: number | null
+          created_at?: string | null
+          expires_at?: string
+          id?: string
+          paystack_reference?: string | null
+          plan?: string
+          started_at?: string
+          status?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      usage_daily: {
+        Row: {
+          count: number
+          created_at: string | null
+          id: string
+          updated_at: string | null
+          used_at: string
+          user_id: string
+        }
+        Insert: {
+          count?: number
+          created_at?: string | null
+          id?: string
+          updated_at?: string | null
+          used_at?: string
+          user_id: string
+        }
+        Update: {
+          count?: number
+          created_at?: string | null
+          id?: string
+          updated_at?: string | null
+          used_at?: string
+          user_id?: string
         }
         Relationships: []
       }
@@ -706,27 +858,68 @@ export type Database = {
         }
         Relationships: []
       }
+      user_usage: {
+        Row: {
+          created_at: string | null
+          id: string
+          points_used: number | null
+          requests_count: number | null
+          updated_at: string | null
+          usage_date: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          points_used?: number | null
+          requests_count?: number | null
+          updated_at?: string | null
+          usage_date?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          points_used?: number | null
+          requests_count?: number | null
+          updated_at?: string | null
+          usage_date?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      get_admin_uid: {
-        Args: Record<PropertyKey, never>
-        Returns: string
-      }
+      can_user_make_request: { Args: { p_user_id?: string }; Returns: Json }
+      cleanup_old_usage: { Args: never; Returns: undefined }
+      get_admin_uid: { Args: never; Returns: string }
+      get_subscription: { Args: { p_user_id?: string }; Returns: Json }
+      get_user_plan: { Args: { p_user_id?: string }; Returns: Json }
       increment_application_count: {
         Args: { job_id: string }
         Returns: undefined
       }
-      reset_daily_credits: {
-        Args: Record<PropertyKey, never>
+      increment_usage: {
+        Args: { p_date?: string; p_user_id?: string }
+        Returns: number
+      }
+      increment_user_usage: {
+        Args: { p_points?: number; p_user_id?: string }
         Returns: undefined
       }
-      use_credit: {
-        Args: { user_uuid: string }
-        Returns: boolean
+      reset_daily_credits: { Args: never; Returns: undefined }
+      upgrade_user_plan: {
+        Args: {
+          p_payment_reference?: string
+          p_plan_key: string
+          p_user_id: string
+        }
+        Returns: Json
       }
+      use_credit: { Args: { user_uuid: string }; Returns: boolean }
     }
     Enums: {
       [_ in never]: never
