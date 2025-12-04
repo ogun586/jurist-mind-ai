@@ -212,7 +212,7 @@ export function ChatInterface() {
 
     try {
       // Call your Python backend with Grok API
-      const response = await fetch('http://127.0.0.1:8000/ask', {
+      const response = await fetch('https://juristmind.onrender.com/ask', {
         method: 'POST',
         mode: 'cors',
         headers: { 'Content-Type': 'application/json' },
@@ -259,7 +259,7 @@ export function ChatInterface() {
       // Fallback response
       const errorResponse: Message = {
         id: (Date.now() + 1).toString(),
-        content: "I'm having trouble connecting right now. Please make sure your backend server is running on http://127.0.0.1:8000",
+        content: "I'm having trouble connecting right now. Please try again later.",
         sender: "ai",
         timestamp: new Date(),
       };
