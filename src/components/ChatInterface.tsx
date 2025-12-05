@@ -275,12 +275,15 @@ export function ChatInterface() {
     setMessages(prev => [...prev, aiPlaceholder]);
 
     try {
-      // Call Python backend with Grok API
+      // Call Python backend with Grok API - using FormData as backend expects
+      const formData = new FormData();
+      formData.append('question', userMessageContent);
+      if (sessionId) formData.append('chat_id', sessionId);
+      if (user?.id) formData.append('user_id', user.id);
+      
       const response = await fetch('https://juristmind.onrender.com/ask', {
         method: 'POST',
-        mode: 'cors',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ question: userMessageContent })
+        body: formData
       });
 
       if (!response.ok) {
