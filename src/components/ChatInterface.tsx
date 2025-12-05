@@ -45,6 +45,17 @@ export function ChatInterface() {
     }
   }, [user]);
 
+  // Listen for new chat event from sidebar
+  useEffect(() => {
+    const handleNewChatEvent = () => {
+      setMessages([]);
+      setCurrentSessionId(null);
+    };
+    
+    window.addEventListener('newChat', handleNewChatEvent);
+    return () => window.removeEventListener('newChat', handleNewChatEvent);
+  }, []);
+
   // Realtime subscription for new messages
   useEffect(() => {
     if (!currentSessionId) return;
@@ -290,24 +301,78 @@ export function ChatInterface() {
         throw new Error('Failed to get AI response');
       }
 
-      const data = await response.json();
-      
-      const aiContent = data.answer || "I'm JURIST MIND, your legal AI assistant. How can I help you with legal questions today?";
-      const aiSources = data.sources || [];
-      
-      // Update AI message in state
-      setMessages(prev => prev.map(msg => 
-        msg.id === aiTempId 
-          ? { ...msg, content: aiContent, sources: aiSources }
-          : msg
-      ));
+      // Handle streaming SSE response
+      if (!response.body) {
+        throw new Error('No response body from server');
+      }
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let fullContent = "";
+      let done = false;
+
+      while (!done) {
+        const { value, done: doneReading } = await reader.read();
+        done = doneReading;
+        
+        if (value) {
+          const chunk = decoder.decode(value, { stream: true });
+          const lines = chunk.split("\n\n");
+          
+          for (const line of lines) {
+            if (!line.startsWith("data:")) continue;
+            const dataStr = line.slice(5).trim();
+            
+            if (dataStr === "[DONE]") {
+              done = true;
+              break;
+            }
+            
+            try {
+              const data = JSON.parse(dataStr);
+              if (data.content) {
+                fullContent += data.content;
+                setMessages(prev => prev.map(msg => 
+                  msg.id === aiTempId 
+                    ? { ...msg, content: fullContent }
+                    : msg
+                ));
+              }
+              if (data.type === "done") {
+                done = true;
+              }
+            } catch (parseError) {
+              // If not JSON, it might be plain text content
+              console.log("Chunk parse info:", parseError);
+            }
+          }
+        }
+      }
+
+      // If no streaming content received, try parsing as regular JSON
+      if (!fullContent) {
+        try {
+          const text = await response.text();
+          const data = JSON.parse(text);
+          fullContent = data.answer || data.content || "I'm JURIST MIND, your legal AI assistant.";
+          setMessages(prev => prev.map(msg => 
+            msg.id === aiTempId 
+              ? { ...msg, content: fullContent }
+              : msg
+          ));
+        } catch {
+          fullContent = "Response received but could not be parsed.";
+        }
+      }
       
       // Save AI response to database
-      const aiDbId = await saveMessage(sessionId, aiContent, 'ai');
-      if (aiDbId) {
-        setMessages(prev => prev.map(msg => 
-          msg.id === aiTempId ? { ...msg, db_id: aiDbId } : msg
-        ));
+      if (fullContent) {
+        const aiDbId = await saveMessage(sessionId, fullContent, 'ai');
+        if (aiDbId) {
+          setMessages(prev => prev.map(msg => 
+            msg.id === aiTempId ? { ...msg, db_id: aiDbId } : msg
+          ));
+        }
       }
       
       // Increment usage count

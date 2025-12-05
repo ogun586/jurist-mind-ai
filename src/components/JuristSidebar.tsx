@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Search, MessageCircle, Scale, History, Menu, X, User, ShoppingBag, Briefcase, FileText, BookOpen, FolderOpen, Crown } from "lucide-react";
-import { NavLink, useLocation } from "react-router-dom";
+import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import {
   Sidebar,
   SidebarContent,
@@ -32,6 +32,7 @@ const navigationItems = [
 export function JuristSidebar() {
   const { state } = useSidebar();
   const location = useLocation();
+  const navigate = useNavigate();
   const currentPath = location.pathname;
   const collapsed = state === "collapsed";
   const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
@@ -45,15 +46,15 @@ export function JuristSidebar() {
 
   const handleSelectSession = (sessionId: string) => {
     setCurrentSessionId(sessionId);
-    // Navigate to chat with session
-    window.location.href = `/?session=${sessionId}`;
+    navigate(`/?session=${sessionId}`);
   };
 
   const handleNewChat = () => {
     setCurrentSessionId(null);
-    if (currentPath !== '/') {
-      window.location.href = '/';
-    }
+    // Clear URL params and navigate to fresh chat
+    navigate('/', { replace: true });
+    // Dispatch custom event to notify ChatInterface
+    window.dispatchEvent(new CustomEvent('newChat'));
   };
 
   return (
