@@ -1,11 +1,10 @@
-import { useState, useEffect } from "react";
-import { Send, Mic, Paperclip, Copy, ChevronDown, ChevronUp } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
+import { Send, Mic, Paperclip } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { ChatHistory } from "@/components/ChatHistory";
 import { NavLink } from "react-router-dom";
 import { SourceDisplay } from "@/components/SourceDisplay";
 
@@ -15,6 +14,7 @@ interface Message {
   sender: "user" | "ai";
   timestamp: Date;
   sources?: string[];
+  db_id?: string; // Track database ID for persisted messages
 }
 
 export function ChatInterface() {
@@ -24,6 +24,12 @@ export function ChatInterface() {
   const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
   const { user } = useAuth();
   const { toast } = useToast();
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // Scroll to bottom when messages change
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
 
   // Load session from URL or most recent session on mount
   useEffect(() => {
@@ -35,10 +41,47 @@ export function ChatInterface() {
     if (sessionId) {
       loadSession(sessionId);
     } else {
-      // Auto-load most recent session if no session in URL
       loadMostRecentSession();
     }
   }, [user]);
+
+  // Realtime subscription for new messages
+  useEffect(() => {
+    if (!currentSessionId) return;
+
+    const channel = supabase
+      .channel(`chat_updates:${currentSessionId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'chat_messages',
+          filter: `session_id=eq.${currentSessionId}`
+        },
+        (payload) => {
+          const newMsg = payload.new as any;
+          // Only add if we don't already have this message (by db_id)
+          setMessages(prev => {
+            if (prev.some(msg => msg.db_id === newMsg.id)) {
+              return prev;
+            }
+            return [...prev, {
+              id: newMsg.id,
+              db_id: newMsg.id,
+              content: newMsg.content,
+              sender: newMsg.sender as 'user' | 'ai',
+              timestamp: new Date(newMsg.created_at),
+            }];
+          });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [currentSessionId]);
 
   const loadMostRecentSession = async () => {
     if (!user) return;
@@ -59,7 +102,6 @@ export function ChatInterface() {
       }
     } catch (error) {
       console.error('Error loading recent session:', error);
-      // Silently fail - user can start a new chat
     }
   };
 
@@ -84,25 +126,28 @@ export function ChatInterface() {
     }
   };
 
-  const saveMessage = async (sessionId: string, content: string, sender: 'user' | 'ai') => {
+  const saveMessage = async (sessionId: string, content: string, sender: 'user' | 'ai'): Promise<string | null> => {
     try {
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('chat_messages')
         .insert({
           session_id: sessionId,
           content,
           sender
-        });
+        })
+        .select('id, created_at')
+        .single();
       
       if (error) throw error;
       
-      // Also update the session's updated_at timestamp
+      // Update session's updated_at timestamp
       await supabase
         .from('chat_sessions')
         .update({ updated_at: new Date().toISOString() })
         .eq('id', sessionId);
         
-      console.log('Message saved successfully:', sender, content.substring(0, 50));
+      console.log('Message saved successfully:', sender, content.substring(0, 50), 'ID:', data?.id);
+      return data?.id || null;
     } catch (error) {
       console.error('Error saving message:', error);
       toast({
@@ -110,6 +155,7 @@ export function ChatInterface() {
         description: "Message may not have been saved",
         variant: "destructive",
       });
+      return null;
     }
   };
 
@@ -159,7 +205,6 @@ export function ChatInterface() {
         return;
       }
 
-      // Show remaining requests/points if available
       if (usageCheck.requests_remaining > 0 && usageCheck.requests_remaining < 10) {
         toast({
           title: "Usage Notice",
@@ -192,31 +237,50 @@ export function ChatInterface() {
       setCurrentSessionId(sessionId);
     }
 
+    const userMessageContent = inputValue;
+    const tempMessageId = Date.now().toString();
+    
     const newMessage: Message = {
-      id: Date.now().toString(),
-      content: inputValue,
+      id: tempMessageId,
+      content: userMessageContent,
       sender: "user",
       timestamp: new Date(),
     };
 
     setMessages(prev => [...prev, newMessage]);
-    
-    // Save user message and update title if it's the first message
-    await saveMessage(sessionId, inputValue, 'user');
-    if (messages.length === 0) {
-      await updateSessionTitle(sessionId, inputValue);
-    }
-    
     setInputValue("");
     setIsLoading(true);
 
+    // Save user message and get db_id
+    const userDbId = await saveMessage(sessionId, userMessageContent, 'user');
+    if (userDbId) {
+      setMessages(prev => prev.map(msg => 
+        msg.id === tempMessageId ? { ...msg, db_id: userDbId } : msg
+      ));
+    }
+    
+    // Update title if first message
+    if (messages.length === 0) {
+      await updateSessionTitle(sessionId, userMessageContent);
+    }
+
+    // Add placeholder AI message
+    const aiTempId = (Date.now() + 1).toString();
+    const aiPlaceholder: Message = {
+      id: aiTempId,
+      content: "",
+      sender: "ai",
+      timestamp: new Date(),
+    };
+    setMessages(prev => [...prev, aiPlaceholder]);
+
     try {
-      // Call your Python backend with Grok API
+      // Call Python backend with Grok API
       const response = await fetch('https://juristmind.onrender.com/ask', {
         method: 'POST',
         mode: 'cors',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ question: newMessage.content })
+        body: JSON.stringify({ question: userMessageContent })
       });
 
       if (!response.ok) {
@@ -225,48 +289,52 @@ export function ChatInterface() {
 
       const data = await response.json();
       
-      const aiResponse: Message = {
-        id: (Date.now() + 1).toString(),
-        content: data.answer || "I'm JURIST MIND, your legal AI assistant. How can I help you with legal questions today?",
-        sender: "ai",
-        timestamp: new Date(),
-        sources: data.sources || [],
-      };
+      const aiContent = data.answer || "I'm JURIST MIND, your legal AI assistant. How can I help you with legal questions today?";
+      const aiSources = data.sources || [];
       
-      setMessages(prev => [...prev, aiResponse]);
+      // Update AI message in state
+      setMessages(prev => prev.map(msg => 
+        msg.id === aiTempId 
+          ? { ...msg, content: aiContent, sources: aiSources }
+          : msg
+      ));
       
-      // Save AI response
-      await saveMessage(sessionId, aiResponse.content, 'ai');
+      // Save AI response to database
+      const aiDbId = await saveMessage(sessionId, aiContent, 'ai');
+      if (aiDbId) {
+        setMessages(prev => prev.map(msg => 
+          msg.id === aiTempId ? { ...msg, db_id: aiDbId } : msg
+        ));
+      }
       
-      // Increment usage count after successful AI response
+      // Increment usage count
       try {
         await supabase.functions.invoke('increment-ai-usage', {
           body: { points: 1 }
         });
       } catch (error) {
         console.error('Error incrementing usage:', error);
-        // Don't block the user, just log the error
       }
       
     } catch (error) {
       console.error('Error calling AI:', error);
       toast({
         title: "Error",
-        description: "Failed to connect to AI assistant. Please check if your backend is running.",
+        description: "Failed to connect to AI assistant. Please try again later.",
         variant: "destructive",
       });
       
-      // Fallback response
-      const errorResponse: Message = {
-        id: (Date.now() + 1).toString(),
-        content: "I'm having trouble connecting right now. Please try again later.",
-        sender: "ai",
-        timestamp: new Date(),
-      };
-      setMessages(prev => [...prev, errorResponse]);
+      const errorContent = "I'm having trouble connecting right now. Please try again later.";
+      
+      // Update with error message
+      setMessages(prev => prev.map(msg => 
+        msg.id === aiTempId 
+          ? { ...msg, content: errorContent }
+          : msg
+      ));
       
       // Save error response
-      await saveMessage(sessionId, errorResponse.content, 'ai');
+      await saveMessage(sessionId, errorContent, 'ai');
     } finally {
       setIsLoading(false);
     }
@@ -274,9 +342,11 @@ export function ChatInterface() {
 
   const loadSession = async (sessionId: string) => {
     try {
+      setIsLoading(true);
+      
       const { data, error } = await supabase
         .from('chat_messages')
-        .select('content, sender, created_at')
+        .select('id, content, sender, created_at')
         .eq('session_id', sessionId)
         .order('created_at', { ascending: true });
 
@@ -289,12 +359,13 @@ export function ChatInterface() {
         return;
       }
       
-      const loadedMessages: Message[] = data.map((msg, index) => ({
-        id: `${sessionId}-${index}`,
+      const loadedMessages: Message[] = data.map((msg) => ({
+        id: msg.id,
+        db_id: msg.id, // Store the database ID
         content: msg.content,
         sender: msg.sender as 'user' | 'ai',
         timestamp: new Date(msg.created_at),
-        sources: [], // Sources not saved in DB for now
+        sources: [],
       }));
       
       setMessages(loadedMessages);
@@ -307,6 +378,8 @@ export function ChatInterface() {
         description: "Failed to load chat session",
         variant: "destructive",
       });
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -363,16 +436,21 @@ export function ChatInterface() {
                           : "bg-transparent border border-border"
                       }`}
                     >
-                      <p className="text-sm leading-relaxed">{message.content}</p>
+                      {message.content ? (
+                        <p className="text-sm leading-relaxed">{message.content}</p>
+                      ) : (
+                        <p className="text-sm leading-relaxed text-muted-foreground">Thinking...</p>
+                      )}
                       <p className="text-xs opacity-70 mt-2">
                         {message.timestamp.toLocaleTimeString()}
                       </p>
-                      {message.sender === "ai" && message.sources && (
+                      {message.sender === "ai" && message.sources && message.sources.length > 0 && (
                         <SourceDisplay sources={message.sources} />
                       )}
                     </div>
                   </div>
                 ))}
+                <div ref={messagesEndRef} />
               </div>
             )}
           </div>
