@@ -91,6 +91,38 @@ export type Database = {
         }
         Relationships: []
       }
+      chat_feedback: {
+        Row: {
+          created_at: string | null
+          id: string
+          is_positive: boolean | null
+          message_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          is_positive?: boolean | null
+          message_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          is_positive?: boolean | null
+          message_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chat_feedback_message_id_fkey"
+            columns: ["message_id"]
+            isOneToOne: false
+            referencedRelation: "chat_messages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       chat_messages: {
         Row: {
           content: string
@@ -147,6 +179,24 @@ export type Database = {
         }
         Relationships: []
       }
+      daily_usage: {
+        Row: {
+          request_count: number | null
+          usage_date: string
+          user_id: string
+        }
+        Insert: {
+          request_count?: number | null
+          usage_date?: string
+          user_id: string
+        }
+        Update: {
+          request_count?: number | null
+          usage_date?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       diary_entries: {
         Row: {
           created_at: string | null
@@ -157,6 +207,7 @@ export type Database = {
           id: string
           next_adjourn_date: string | null
           priority: string | null
+          reminder_sent: boolean | null
           status: string | null
           suit_number: string | null
           title: string
@@ -172,6 +223,7 @@ export type Database = {
           id?: string
           next_adjourn_date?: string | null
           priority?: string | null
+          reminder_sent?: boolean | null
           status?: string | null
           suit_number?: string | null
           title: string
@@ -187,6 +239,7 @@ export type Database = {
           id?: string
           next_adjourn_date?: string | null
           priority?: string | null
+          reminder_sent?: boolean | null
           status?: string | null
           suit_number?: string | null
           title?: string
@@ -566,6 +619,7 @@ export type Database = {
           id: string
           monthly_points: number | null
           name: string
+          paystack_plan_id: string | null
           plan_key: string
           price_ngn: number
           updated_at: string | null
@@ -579,6 +633,7 @@ export type Database = {
           id?: string
           monthly_points?: number | null
           name: string
+          paystack_plan_id?: string | null
           plan_key: string
           price_ngn: number
           updated_at?: string | null
@@ -592,6 +647,7 @@ export type Database = {
           id?: string
           monthly_points?: number | null
           name?: string
+          paystack_plan_id?: string | null
           plan_key?: string
           price_ngn?: number
           updated_at?: string | null
@@ -894,9 +950,11 @@ export type Database = {
     }
     Functions: {
       can_user_make_request: { Args: { p_user_id?: string }; Returns: Json }
+      check_and_increment_usage: { Args: never; Returns: Json }
       cleanup_old_usage: { Args: never; Returns: undefined }
       get_admin_uid: { Args: never; Returns: string }
       get_subscription: { Args: { p_user_id?: string }; Returns: Json }
+      get_usage_stats: { Args: never; Returns: Json }
       get_user_plan: { Args: { p_user_id?: string }; Returns: Json }
       increment_application_count: {
         Args: { job_id: string }
