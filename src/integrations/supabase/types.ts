@@ -179,6 +179,160 @@ export type Database = {
         }
         Relationships: []
       }
+      ctc_audit_log: {
+        Row: {
+          action: string
+          created_at: string
+          ctc_file_id: string | null
+          details: Json | null
+          id: string
+          note_id: string | null
+          user_id: string | null
+          user_name: string | null
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          ctc_file_id?: string | null
+          details?: Json | null
+          id?: string
+          note_id?: string | null
+          user_id?: string | null
+          user_name?: string | null
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          ctc_file_id?: string | null
+          details?: Json | null
+          id?: string
+          note_id?: string | null
+          user_id?: string | null
+          user_name?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ctc_audit_log_ctc_file_id_fkey"
+            columns: ["ctc_file_id"]
+            isOneToOne: false
+            referencedRelation: "ctc_files"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ctc_audit_log_note_id_fkey"
+            columns: ["note_id"]
+            isOneToOne: false
+            referencedRelation: "judge_notes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ctc_comments: {
+        Row: {
+          content: string
+          created_at: string
+          ctc_file_id: string
+          id: string
+          page_number: number | null
+          updated_at: string
+          user_id: string
+          user_name: string | null
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          ctc_file_id: string
+          id?: string
+          page_number?: number | null
+          updated_at?: string
+          user_id: string
+          user_name?: string | null
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          ctc_file_id?: string
+          id?: string
+          page_number?: number | null
+          updated_at?: string
+          user_id?: string
+          user_name?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ctc_comments_ctc_file_id_fkey"
+            columns: ["ctc_file_id"]
+            isOneToOne: false
+            referencedRelation: "ctc_files"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ctc_files: {
+        Row: {
+          bench_judge_name: string | null
+          case_reference: string | null
+          created_at: string
+          file_name: string
+          file_path: string
+          file_size: number
+          id: string
+          is_current: boolean
+          issuing_court: string | null
+          judgment_date: string | null
+          mime_type: string
+          note_id: string
+          updated_at: string
+          uploaded_by: string | null
+          uploaded_by_name: string | null
+          version: number
+        }
+        Insert: {
+          bench_judge_name?: string | null
+          case_reference?: string | null
+          created_at?: string
+          file_name: string
+          file_path: string
+          file_size: number
+          id?: string
+          is_current?: boolean
+          issuing_court?: string | null
+          judgment_date?: string | null
+          mime_type?: string
+          note_id: string
+          updated_at?: string
+          uploaded_by?: string | null
+          uploaded_by_name?: string | null
+          version?: number
+        }
+        Update: {
+          bench_judge_name?: string | null
+          case_reference?: string | null
+          created_at?: string
+          file_name?: string
+          file_path?: string
+          file_size?: number
+          id?: string
+          is_current?: boolean
+          issuing_court?: string | null
+          judgment_date?: string | null
+          mime_type?: string
+          note_id?: string
+          updated_at?: string
+          uploaded_by?: string | null
+          uploaded_by_name?: string | null
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ctc_files_note_id_fkey"
+            columns: ["note_id"]
+            isOneToOne: false
+            referencedRelation: "judge_notes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       daily_usage: {
         Row: {
           request_count: number | null

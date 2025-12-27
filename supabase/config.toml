@@ -75,3 +75,6 @@ verify_jwt = true
 
 [functions.delete-notification]
 verify_jwt = true
+
+[functions.manage-ctc]
+verify_jwt = true
