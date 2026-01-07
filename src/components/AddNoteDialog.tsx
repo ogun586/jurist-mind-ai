@@ -164,11 +164,61 @@ export function AddNoteDialog({ onNoteAdded }: AddNoteDialogProps) {
     setLoading(true);
 
     try {
-      const tagsArray = form.tags.length > 0 
-        ? form.tags 
-        : [];
+      const tagsArray = form.tags.length > 0 ? form.tags : [];
+      let uploadedFilePath: string | null = null;
+      let uploadedFileName: string | null = null;
+      let uploadedFileSize: number | null = null;
 
-      // Step 1: Create the note
+      // Step 1: Upload CTC file FIRST if provided
+      if (ctcFile) {
+        // Validate CTC metadata
+        if (!ctcMetadata.judgment_date || !ctcMetadata.issuing_court || !ctcMetadata.bench_judge_name) {
+          toast.error("Please fill in all required CTC metadata fields");
+          setLoading(false);
+          return;
+        }
+
+        setUploadProgress(10);
+        
+        // Generate a unique file path
+        const fileExt = ctcFile.name.split('.').pop();
+        const fileName = `${crypto.randomUUID()}.${fileExt}`;
+        const filePath = `ctc-uploads/${fileName}`;
+
+        // Get upload URL
+        const { data: urlData, error: urlError } = await supabase.functions.invoke('manage-ctc', {
+          body: {
+            action: 'get-upload-url',
+            filePath,
+            contentType: ctcFile.type
+          }
+        });
+
+        if (urlError || !urlData?.signedUrl) {
+          throw new Error('Failed to get upload URL');
+        }
+
+        setUploadProgress(30);
+
+        // Upload the file to storage
+        const uploadResponse = await fetch(urlData.signedUrl, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/pdf' },
+          body: ctcFile,
+        });
+
+        if (!uploadResponse.ok) {
+          throw new Error('Failed to upload CTC file');
+        }
+
+        uploadedFilePath = filePath;
+        uploadedFileName = ctcFile.name;
+        uploadedFileSize = ctcFile.size;
+        setUploadProgress(50);
+      }
+
+      // Step 2: Create the note
+      setUploadProgress(60);
       const { data: noteData, error: noteError } = await supabase.functions.invoke('manage-judge-notes', {
         body: {
           action: 'create',
@@ -180,48 +230,34 @@ export function AddNoteDialog({ onNoteAdded }: AddNoteDialogProps) {
       });
 
       if (noteError) throw noteError;
+      setUploadProgress(80);
 
-      // Step 2: Upload CTC if file is selected
-      if (ctcFile && noteData?.id) {
-        setUploadProgress(20);
-
-        // Validate CTC metadata if file is present
-        if (!ctcMetadata.judgment_date || !ctcMetadata.issuing_court || !ctcMetadata.bench_judge_name) {
-          toast.error("Please fill in all required CTC metadata fields");
-          setLoading(false);
-          return;
-        }
-
-        const { data: uploadData, error: uploadError } = await supabase.functions.invoke('manage-ctc', {
+      // Step 3: Create CTC record if file was uploaded
+      if (uploadedFilePath && noteData?.id) {
+        const { error: ctcError } = await supabase.functions.invoke('manage-ctc', {
           body: {
-            action: 'upload',
+            action: 'create',
             noteId: noteData.id,
-            fileName: ctcFile.name,
-            fileSize: ctcFile.size,
-            metadata: ctcMetadata,
-          },
+            fileName: uploadedFileName,
+            filePath: uploadedFilePath,
+            fileSize: uploadedFileSize,
+            mimeType: 'application/pdf',
+            metadata: {
+              judgment_date: ctcMetadata.judgment_date,
+              issuing_court: ctcMetadata.issuing_court,
+              bench_judge_name: ctcMetadata.bench_judge_name,
+              case_reference: ctcMetadata.case_reference || null
+            }
+          }
         });
 
-        if (uploadError) throw uploadError;
-        setUploadProgress(50);
-
-        // Upload file to storage
-        const uploadResponse = await fetch(uploadData.uploadUrl, {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/pdf',
-          },
-          body: ctcFile,
-        });
-
-        if (!uploadResponse.ok) {
-          throw new Error('Failed to upload CTC file');
+        if (ctcError) {
+          console.error('CTC record creation failed:', ctcError);
         }
-
-        setUploadProgress(100);
       }
 
-      toast.success('Case report added successfully!');
+      setUploadProgress(100);
+      toast.success('Case report published successfully!');
       handleClose();
       onNoteAdded();
     } catch (error: any) {
