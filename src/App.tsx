@@ -17,6 +17,7 @@ import Diary from "./pages/Diary";
 import Jobs from "./pages/Jobs";
 import Marketplace from "./pages/Marketplace";
 import LawyersDirectory from "./pages/LawyersDirectory";
+import { LawyerProfilePage } from "@/components/lawyers";
 import JudgeNotes from "./pages/JudgeNotes";
 import JTL from "./pages/JTL";
 import History from "./pages/History";
@@ -56,6 +57,7 @@ const App = () => (
                           <Route path="/jobs" element={<Jobs />} />
                           <Route path="/marketplace" element={<Marketplace />} />
                           <Route path="/lawyers" element={<LawyersDirectory />} />
+                          <Route path="/lawyers/:slug" element={<LawyerProfilePage />} />
                           <Route path="/judge-notes" element={<JudgeNotes />} />
                           <Route path="/jtl" element={<JTL />} />
                           <Route path="/history" element={<History />} />
