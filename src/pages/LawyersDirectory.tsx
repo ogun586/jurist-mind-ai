@@ -1,13 +1,15 @@
 import { useState, useEffect } from "react";
-import { Search, MapPin, Star, Phone, Mail, Award, Scale, Users } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { Search, Filter, MapPin, Users, Sparkles, TrendingUp } from "lucide-react";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Button } from "@/components/ui/button";
+import { 
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue 
+} from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { AddLawyerDialog } from "@/components/AddLawyerDialog";
+import { LawyerCard, RegisterLawyerDialog } from "@/components/lawyers";
 
 interface Lawyer {
   id: string;
@@ -16,16 +18,19 @@ interface Lawyer {
   phone?: string;
   state: string;
   city?: string;
-  location?: string;
+  firm_name?: string;
+  firm_logo_url?: string;
+  avatar_url?: string;
+  brand_accent_color?: string;
   description?: string;
   specialization: string[];
   years_experience: number;
-  bar_number?: string;
   rating: number;
   total_ratings: number;
-  verified: boolean;
-  social_media?: string;
-  website?: string;
+  verification_status?: string;
+  availability_status?: string;
+  slug?: string;
+  profile_views?: number;
 }
 
 export default function LawyersDirectory() {
@@ -37,6 +42,7 @@ export default function LawyersDirectory() {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedState, setSelectedState] = useState("all");
   const [selectedSpecialization, setSelectedSpecialization] = useState("all");
+  const [showFilters, setShowFilters] = useState(false);
 
   useEffect(() => {
     fetchLawyers();
@@ -51,8 +57,8 @@ export default function LawyersDirectory() {
       });
 
       if (error) throw error;
-      setLawyers(data);
-      setFilteredLawyers(data);
+      setLawyers(data || []);
+      setFilteredLawyers(data || []);
     } catch (error) {
       console.error('Error fetching lawyers:', error);
       toast.error('Failed to fetch lawyers');
@@ -68,7 +74,7 @@ export default function LawyersDirectory() {
       });
 
       if (error) throw error;
-      setStates(data);
+      setStates(data || []);
     } catch (error) {
       console.error('Error fetching states:', error);
     }
@@ -81,21 +87,21 @@ export default function LawyersDirectory() {
       });
 
       if (error) throw error;
-      setSpecializations(data);
+      setSpecializations(data || []);
     } catch (error) {
       console.error('Error fetching specializations:', error);
     }
   };
 
-  const handleSearch = () => {
+  useEffect(() => {
     let filtered = lawyers;
 
     if (searchTerm) {
+      const term = searchTerm.toLowerCase();
       filtered = filtered.filter(lawyer => 
-        lawyer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        lawyer.specialization.some(spec => 
-          spec.toLowerCase().includes(searchTerm.toLowerCase())
-        )
+        lawyer.name.toLowerCase().includes(term) ||
+        lawyer.firm_name?.toLowerCase().includes(term) ||
+        lawyer.specialization.some(spec => spec.toLowerCase().includes(term))
       );
     }
 
@@ -110,31 +116,26 @@ export default function LawyersDirectory() {
     }
 
     setFilteredLawyers(filtered);
-  };
-
-  useEffect(() => {
-    handleSearch();
   }, [searchTerm, selectedState, selectedSpecialization, lawyers]);
 
-  const renderStars = (rating: number) => {
-    return Array.from({ length: 5 }, (_, i) => (
-      <Star
-        key={i}
-        className={`w-4 h-4 ${
-          i < Math.floor(rating)
-            ? 'fill-yellow-400 text-yellow-400'
-            : 'text-gray-300'
-        }`}
-      />
-    ));
-  };
+  const onlineLawyers = filteredLawyers.filter(l => l.availability_status === 'online').length;
+  const topRated = filteredLawyers.filter(l => l.rating >= 4.5).length;
 
   if (loading) {
     return (
-      <div className="h-full bg-background flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
-          <p className="mt-2 text-muted-foreground">Loading lawyers...</p>
+      <div className="h-full bg-background overflow-y-auto">
+        <div className="max-w-7xl mx-auto p-6">
+          {/* Header Skeleton */}
+          <div className="mb-8">
+            <Skeleton className="h-10 w-80 mb-2" />
+            <Skeleton className="h-5 w-96" />
+          </div>
+          {/* Grid Skeleton */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {[...Array(6)].map((_, i) => (
+              <Skeleton key={i} className="h-72 rounded-xl" />
+            ))}
+          </div>
         </div>
       </div>
     );
@@ -142,182 +143,175 @@ export default function LawyersDirectory() {
 
   return (
     <div className="h-full bg-background overflow-y-auto">
-      <div className="max-w-6xl mx-auto p-6">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-foreground mb-2">
-            Connect with a Lawyer
-          </h1>
-          <p className="text-muted-foreground">
-            Find verified legal professionals in Nigeria
-          </p>
+      <div className="max-w-7xl mx-auto p-6">
+        {/* Hero Header */}
+        <div className="relative mb-8 p-8 rounded-2xl bg-gradient-to-br from-primary/10 via-primary/5 to-background border border-primary/10 overflow-hidden">
+          <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
+          
+          <div className="relative z-10">
+            <div className="flex items-center gap-2 mb-3">
+              <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                <Users className="w-5 h-5 text-primary" />
+              </div>
+              <Badge variant="secondary" className="text-xs">
+                <Sparkles className="w-3 h-3 mr-1" />
+                Trusted Legal Professionals
+              </Badge>
+            </div>
+            
+            <h1 className="text-3xl md:text-4xl font-bold text-foreground mb-2">
+              Connect with a Lawyer
+            </h1>
+            <p className="text-muted-foreground text-lg max-w-2xl">
+              Discover verified legal professionals across Nigeria. Build lasting professional relationships with trusted lawyers.
+            </p>
+
+            {/* Stats */}
+            <div className="flex flex-wrap gap-6 mt-6">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center">
+                  <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-foreground">{onlineLawyers} Online</p>
+                  <p className="text-xs text-muted-foreground">Available now</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-lg bg-amber-500/10 flex items-center justify-center">
+                  <TrendingUp className="w-4 h-4 text-amber-500" />
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-foreground">{topRated} Top Rated</p>
+                  <p className="text-xs text-muted-foreground">4.5+ stars</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                  <MapPin className="w-4 h-4 text-primary" />
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-foreground">{states.length} States</p>
+                  <p className="text-xs text-muted-foreground">Nationwide coverage</p>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
 
-        <div className="flex gap-4 mb-8">
-          <div className="flex-1 relative">
-            <Search className="w-5 h-5 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-            <Input 
-              placeholder="Search lawyers..." 
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10"
-            />
-          </div>
-          
-          <Select value={selectedState} onValueChange={setSelectedState}>
-            <SelectTrigger className="w-48">
-              <SelectValue placeholder="Select State" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All States</SelectItem>
-              {states.map(state => (
-                <SelectItem key={state} value={state}>{state}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+        {/* Search & Filters */}
+        <div className="sticky top-0 z-20 bg-background/95 backdrop-blur-sm pb-4 mb-6">
+          <div className="flex flex-col md:flex-row gap-4">
+            {/* Search Input */}
+            <div className="relative flex-1">
+              <Search className="w-5 h-5 absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground" />
+              <Input 
+                placeholder="Search by name, firm, or practice area..." 
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-12 h-12 text-base"
+              />
+            </div>
 
-          <AddLawyerDialog onLawyerAdded={fetchLawyers} />
+            {/* Filter Toggle & Register */}
+            <div className="flex gap-3">
+              <Button
+                variant="outline"
+                className="h-12 px-4"
+                onClick={() => setShowFilters(!showFilters)}
+              >
+                <Filter className="w-4 h-4 mr-2" />
+                Filters
+                {(selectedState !== 'all' || selectedSpecialization !== 'all') && (
+                  <Badge className="ml-2 h-5 w-5 p-0 flex items-center justify-center text-xs">
+                    {(selectedState !== 'all' ? 1 : 0) + (selectedSpecialization !== 'all' ? 1 : 0)}
+                  </Badge>
+                )}
+              </Button>
+              <RegisterLawyerDialog onLawyerAdded={fetchLawyers} />
+            </div>
+          </div>
+
+          {/* Expandable Filters */}
+          {showFilters && (
+            <div className="flex flex-wrap gap-4 mt-4 p-4 bg-muted/30 rounded-xl border animate-in slide-in-from-top-2">
+              <Select value={selectedState} onValueChange={setSelectedState}>
+                <SelectTrigger className="w-48 h-10">
+                  <MapPin className="w-4 h-4 mr-2 text-muted-foreground" />
+                  <SelectValue placeholder="All States" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All States</SelectItem>
+                  {states.map(state => (
+                    <SelectItem key={state} value={state}>{state}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              <Select value={selectedSpecialization} onValueChange={setSelectedSpecialization}>
+                <SelectTrigger className="w-56 h-10">
+                  <SelectValue placeholder="All Specializations" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Specializations</SelectItem>
+                  {specializations.map(spec => (
+                    <SelectItem key={spec} value={spec}>{spec}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              {(selectedState !== 'all' || selectedSpecialization !== 'all') && (
+                <Button 
+                  variant="ghost" 
+                  size="sm"
+                  onClick={() => {
+                    setSelectedState('all');
+                    setSelectedSpecialization('all');
+                  }}
+                  className="text-muted-foreground"
+                >
+                  Clear filters
+                </Button>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Results Count */}
-        <div className="mb-4">
-          <p className="text-sm text-muted-foreground">
-            {filteredLawyers.length} lawyer(s) found
+        <div className="flex items-center justify-between mb-6">
+          <p className="text-muted-foreground">
+            <span className="font-semibold text-foreground">{filteredLawyers.length}</span> lawyers found
           </p>
         </div>
 
         {/* Lawyers Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {filteredLawyers.map((lawyer) => (
-            <Card key={lawyer.id} className="hover:shadow-lg transition-shadow">
-              <CardHeader>
-                <CardTitle className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-2">
-                      <Scale className="w-5 h-5 text-primary" />
-                      <h3 className="text-lg font-semibold">{lawyer.name}</h3>
-                      {lawyer.verified && (
-                        <Badge className="bg-green-100 text-green-800 border-green-300">
-                          Verified
-                        </Badge>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-1 mb-2">
-                      {renderStars(lawyer.rating)}
-                      <span className="text-sm text-muted-foreground ml-1">
-                        ({lawyer.total_ratings} reviews)
-                      </span>
-                    </div>
-                  </div>
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                {lawyer.description && (
-                  <div className="mb-4">
-                    <p className="text-sm text-muted-foreground">{lawyer.description}</p>
-                  </div>
-                )}
-                
-                <div className="space-y-3">
-                  <div className="flex items-center gap-2">
-                    <MapPin className="w-4 h-4 text-muted-foreground" />
-                    <span className="text-sm">
-                      {lawyer.location || (lawyer.city ? `${lawyer.city}, ${lawyer.state}` : lawyer.state)}
-                    </span>
-                  </div>
-
-                  <div className="flex items-center gap-2">
-                    <Award className="w-4 h-4 text-muted-foreground" />
-                    <span className="text-sm">
-                      {lawyer.years_experience} years experience
-                    </span>
-                  </div>
-
-                  {lawyer.social_media && (
-                    <div className="flex items-center gap-2">
-                      <Users className="w-4 h-4 text-muted-foreground" />
-                      <a 
-                        href={lawyer.social_media.startsWith('http') ? lawyer.social_media : `https://${lawyer.social_media}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-sm text-primary hover:underline"
-                      >
-                        Social Media
-                      </a>
-                    </div>
-                  )}
-
-                  {lawyer.website && (
-                    <div className="flex items-center gap-2">
-                      <Users className="w-4 h-4 text-muted-foreground" />
-                      <a 
-                        href={lawyer.website.startsWith('http') ? lawyer.website : `https://${lawyer.website}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-sm text-primary hover:underline"
-                      >
-                        Website
-                      </a>
-                    </div>
-                  )}
-
-                  <div className="flex flex-wrap gap-1 mt-2">
-                    {lawyer.specialization.slice(0, 3).map((spec, index) => (
-                      <Badge key={index} variant="outline" className="text-xs">
-                        {spec}
-                      </Badge>
-                    ))}
-                    {lawyer.specialization.length > 3 && (
-                      <Badge variant="outline" className="text-xs">
-                        +{lawyer.specialization.length - 3} more
-                      </Badge>
-                    )}
-                  </div>
-
-                  <div className="flex gap-2 pt-4 border-t border-border">
-                    {lawyer.email && (
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
-                        className="flex-1"
-                        onClick={() => {
-                          navigator.clipboard.writeText(lawyer.email);
-                          toast.success('Email copied to clipboard');
-                        }}
-                      >
-                        <Mail className="w-3 h-3 mr-1" />
-                        Email
-                      </Button>
-                    )}
-                    {lawyer.phone && (
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
-                        className="flex-1"
-                        onClick={() => {
-                          navigator.clipboard.writeText(lawyer.phone);
-                          toast.success('Phone number copied to clipboard');
-                        }}
-                      >
-                        <Phone className="w-3 h-3 mr-1" />
-                        Call
-                      </Button>
-                    )}
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-
-        {filteredLawyers.length === 0 && !loading && (
-          <div className="text-center py-12">
-            <Scale className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-foreground mb-2">
+        {filteredLawyers.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {filteredLawyers.map((lawyer) => (
+              <LawyerCard key={lawyer.id} lawyer={lawyer} />
+            ))}
+          </div>
+        ) : (
+          <div className="text-center py-16">
+            <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-muted flex items-center justify-center">
+              <Users className="w-8 h-8 text-muted-foreground" />
+            </div>
+            <h3 className="text-lg font-semibold text-foreground mb-2">
               No lawyers found
             </h3>
-            <p className="text-muted-foreground">
-              Try adjusting your search criteria or browse all available lawyers.
+            <p className="text-muted-foreground max-w-md mx-auto mb-6">
+              We couldn't find any lawyers matching your criteria. Try adjusting your filters or search term.
             </p>
+            <Button 
+              variant="outline"
+              onClick={() => {
+                setSearchTerm('');
+                setSelectedState('all');
+                setSelectedSpecialization('all');
+              }}
+            >
+              Clear all filters
+            </Button>
           </div>
         )}
       </div>
