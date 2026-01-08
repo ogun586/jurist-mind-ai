@@ -551,67 +551,171 @@ export type Database = {
         }
         Relationships: []
       }
+      lawyer_credentials: {
+        Row: {
+          created_at: string | null
+          credential_type: string
+          file_name: string
+          file_path: string
+          file_size: number
+          id: string
+          lawyer_id: string
+          mime_type: string
+          notes: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          credential_type: string
+          file_name: string
+          file_path: string
+          file_size: number
+          id?: string
+          lawyer_id: string
+          mime_type: string
+          notes?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          credential_type?: string
+          file_name?: string
+          file_path?: string
+          file_size?: number
+          id?: string
+          lawyer_id?: string
+          mime_type?: string
+          notes?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lawyer_credentials_lawyer_id_fkey"
+            columns: ["lawyer_id"]
+            isOneToOne: false
+            referencedRelation: "lawyers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       lawyers: {
         Row: {
+          availability_status: string | null
+          avatar_url: string | null
           bar_number: string | null
+          bio_structured: Json | null
+          brand_accent_color: string | null
           city: string | null
+          country: string | null
           created_at: string | null
           description: string | null
           email: string
+          firm_logo_url: string | null
+          firm_name: string | null
           id: string
+          intro_video_url: string | null
           location: string | null
           name: string
           phone: string | null
+          postal_code: string | null
+          profile_views: number | null
           rating: number | null
+          slug: string | null
           social_media: string | null
           specialization: string[] | null
           state: string
+          street: string | null
           total_ratings: number | null
           updated_at: string | null
           user_id: string | null
+          verification_notes: string | null
+          verification_status: string | null
           verified: boolean | null
+          verified_at: string | null
+          verified_by: string | null
           website: string | null
           years_experience: number | null
         }
         Insert: {
+          availability_status?: string | null
+          avatar_url?: string | null
           bar_number?: string | null
+          bio_structured?: Json | null
+          brand_accent_color?: string | null
           city?: string | null
+          country?: string | null
           created_at?: string | null
           description?: string | null
           email: string
+          firm_logo_url?: string | null
+          firm_name?: string | null
           id?: string
+          intro_video_url?: string | null
           location?: string | null
           name: string
           phone?: string | null
+          postal_code?: string | null
+          profile_views?: number | null
           rating?: number | null
+          slug?: string | null
           social_media?: string | null
           specialization?: string[] | null
           state: string
+          street?: string | null
           total_ratings?: number | null
           updated_at?: string | null
           user_id?: string | null
+          verification_notes?: string | null
+          verification_status?: string | null
           verified?: boolean | null
+          verified_at?: string | null
+          verified_by?: string | null
           website?: string | null
           years_experience?: number | null
         }
         Update: {
+          availability_status?: string | null
+          avatar_url?: string | null
           bar_number?: string | null
+          bio_structured?: Json | null
+          brand_accent_color?: string | null
           city?: string | null
+          country?: string | null
           created_at?: string | null
           description?: string | null
           email?: string
+          firm_logo_url?: string | null
+          firm_name?: string | null
           id?: string
+          intro_video_url?: string | null
           location?: string | null
           name?: string
           phone?: string | null
+          postal_code?: string | null
+          profile_views?: number | null
           rating?: number | null
+          slug?: string | null
           social_media?: string | null
           specialization?: string[] | null
           state?: string
+          street?: string | null
           total_ratings?: number | null
           updated_at?: string | null
           user_id?: string | null
+          verification_notes?: string | null
+          verification_status?: string | null
           verified?: boolean | null
+          verified_at?: string | null
+          verified_by?: string | null
           website?: string | null
           years_experience?: number | null
         }
@@ -1112,6 +1216,10 @@ export type Database = {
       get_user_plan: { Args: { p_user_id?: string }; Returns: Json }
       increment_application_count: {
         Args: { job_id: string }
+        Returns: undefined
+      }
+      increment_lawyer_views: {
+        Args: { lawyer_slug: string }
         Returns: undefined
       }
       increment_usage: {
