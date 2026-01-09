@@ -1,8 +1,8 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { 
-  ArrowLeft, Star, MapPin, Mail, Phone, MessageSquare, CheckCircle2, 
-  Globe, Linkedin, Clock, Briefcase, Award, Eye, Play, Shield
+  ArrowLeft, MapPin, Mail, Phone, MessageSquare, CheckCircle2, 
+  Globe, Linkedin, Briefcase, Award, Eye, Play, Shield
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -12,6 +12,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import LawyerRating from "./LawyerRating";
 
 interface Lawyer {
   id: string;
@@ -90,19 +91,6 @@ export default function LawyerProfilePage() {
 
   const getInitials = (name: string) => {
     return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
-  };
-
-  const renderStars = (rating: number) => {
-    return Array.from({ length: 5 }, (_, i) => (
-      <Star
-        key={i}
-        className={`w-5 h-5 ${
-          i < Math.floor(rating)
-            ? 'fill-amber-400 text-amber-400'
-            : 'text-muted-foreground/30'
-        }`}
-      />
-    ));
   };
 
   const getStatusBadge = (status?: string) => {
@@ -232,11 +220,15 @@ export default function LawyerProfilePage() {
                 )}
               </div>
 
-              {/* Rating */}
-              <div className="flex items-center gap-3 mb-4">
-                <div className="flex items-center gap-1">{renderStars(lawyer.rating)}</div>
-                <span className="font-semibold">{lawyer.rating.toFixed(1)}</span>
-                <span className="text-muted-foreground">({lawyer.total_ratings} reviews)</span>
+              {/* Interactive Rating */}
+              <div className="mb-4">
+                <LawyerRating
+                  lawyerId={lawyer.id}
+                  currentRating={lawyer.rating}
+                  totalRatings={lawyer.total_ratings}
+                  accentColor={accentColor}
+                  onRatingUpdated={fetchLawyer}
+                />
               </div>
 
               {/* Verification Badge */}
