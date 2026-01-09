@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -8,59 +10,74 @@ All colors MUST be HSL.
 
 @layer base {
   :root {
-    /* Professional White Theme */
+    /* Legal Authority Vault Theme - Charcoal, Justice Blue, Legal White */
     --background: 0 0% 100%;
-    --foreground: 0 0% 9%;
+    --foreground: 220 20% 12%;
     
     --card: 0 0% 100%;
-    --card-foreground: 0 0% 9%;
+    --card-foreground: 220 20% 12%;
     
     --popover: 0 0% 100%;
-    --popover-foreground: 0 0% 9%;
+    --popover-foreground: 220 20% 12%;
     
-    /* Subtle gray primary for professional look */
-    --primary: 0 0% 20%;
+    /* Charcoal Primary */
+    --primary: 220 15% 20%;
     --primary-foreground: 0 0% 98%;
-    --primary-hover: 0 0% 15%;
+    --primary-hover: 220 15% 15%;
     
-    --secondary: 0 0% 96%;
-    --secondary-foreground: 0 0% 9%;
+    --secondary: 220 10% 96%;
+    --secondary-foreground: 220 20% 12%;
     
-    --muted: 0 0% 96%;
-    --muted-foreground: 0 0% 45%;
+    --muted: 220 10% 96%;
+    --muted-foreground: 220 10% 45%;
     
-    --accent: 0 0% 96%;
-    --accent-foreground: 0 0% 9%;
+    --accent: 220 10% 96%;
+    --accent-foreground: 220 20% 12%;
     
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 98%;
     
-    --border: 0 0% 90%;
-    --input: 0 0% 96%;
-    --ring: 0 0% 20%;
+    --border: 220 10% 90%;
+    --input: 220 10% 96%;
+    --ring: 220 15% 20%;
+    
+    /* Justice Blue - for accents and verification */
+    --justice-blue: 215 70% 45%;
+    --justice-blue-foreground: 0 0% 100%;
+    --justice-blue-muted: 215 40% 95%;
+    
+    /* Legal Status Colors */
+    --status-pending: 45 100% 50%;
+    --status-pending-foreground: 45 100% 20%;
+    --status-verified: 145 65% 42%;
+    --status-verified-foreground: 0 0% 100%;
+    --status-rejected: 0 84% 60%;
+    --status-rejected-foreground: 0 0% 100%;
     
     /* Sidebar */
-    --sidebar-background: 0 0% 98%;
-    --sidebar-foreground: 0 0% 9%;
-    --sidebar-primary: 0 0% 20%;
+    --sidebar-background: 220 15% 98%;
+    --sidebar-foreground: 220 20% 12%;
+    --sidebar-primary: 220 15% 20%;
     --sidebar-primary-foreground: 0 0% 98%;
-    --sidebar-accent: 0 0% 96%;
-    --sidebar-accent-foreground: 0 0% 9%;
-    --sidebar-border: 0 0% 92%;
-    --sidebar-ring: 0 0% 20%;
+    --sidebar-accent: 220 10% 94%;
+    --sidebar-accent-foreground: 220 20% 12%;
+    --sidebar-border: 220 10% 92%;
+    --sidebar-ring: 220 15% 20%;
 
     --radius: 0.75rem;
 
-    /* Professional gradients */
-    --gradient-primary: linear-gradient(135deg, hsl(0, 0%, 98%), hsl(0, 0%, 96%));
-    --gradient-surface: linear-gradient(180deg, hsl(0, 0%, 100%), hsl(0, 0%, 98%));
-    --gradient-accent: linear-gradient(135deg, hsl(0, 0%, 96%), hsl(0, 0%, 94%));
+    /* Professional Legal Gradients */
+    --gradient-legal: linear-gradient(135deg, hsl(220, 15%, 98%), hsl(215, 40%, 97%));
+    --gradient-charcoal: linear-gradient(180deg, hsl(220, 15%, 22%), hsl(220, 15%, 18%));
+    --gradient-verified: linear-gradient(135deg, hsl(145, 65%, 42%), hsl(145, 70%, 38%));
+    --gradient-surface: linear-gradient(180deg, hsl(0, 0%, 100%), hsl(220, 10%, 98%));
 
-    /* Subtle shadows */
-    --shadow-sm: 0 1px 2px 0 hsl(0 0% 0% / 0.05);
-    --shadow-md: 0 4px 6px -1px hsl(0 0% 0% / 0.1), 0 2px 4px -1px hsl(0 0% 0% / 0.06);
-    --shadow-lg: 0 10px 15px -3px hsl(0 0% 0% / 0.1), 0 4px 6px -2px hsl(0 0% 0% / 0.05);
-    --shadow-glow: 0 0 25px hsl(0 0% 0% / 0.1);
+    /* Legal Shadows */
+    --shadow-sm: 0 1px 2px 0 hsl(220 15% 20% / 0.04);
+    --shadow-md: 0 4px 6px -1px hsl(220 15% 20% / 0.08), 0 2px 4px -1px hsl(220 15% 20% / 0.04);
+    --shadow-lg: 0 10px 15px -3px hsl(220 15% 20% / 0.08), 0 4px 6px -2px hsl(220 15% 20% / 0.04);
+    --shadow-legal: 0 4px 20px -4px hsl(215 70% 45% / 0.15);
+    --shadow-glow: 0 0 25px hsl(215 70% 45% / 0.12);
 
     /* Transitions */
     --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -95,6 +112,18 @@ All colors MUST be HSL.
     --border: 217.2 32.6% 17.5%;
     --input: 217.2 32.6% 17.5%;
     --ring: 212.7 26.8% 83.9%;
+    
+    /* Justice Blue - Dark Mode */
+    --justice-blue: 215 70% 55%;
+    --justice-blue-foreground: 0 0% 100%;
+    --justice-blue-muted: 215 40% 15%;
+    
+    /* Status Colors - Dark Mode */
+    --status-pending: 45 90% 45%;
+    --status-pending-foreground: 45 100% 10%;
+    --status-verified: 145 60% 45%;
+    --status-verified-foreground: 0 0% 100%;
+    
     --sidebar-background: 240 5.9% 10%;
     --sidebar-foreground: 240 4.8% 95.9%;
     --sidebar-primary: 224.3 76.3% 48%;
@@ -114,4 +143,54 @@ All colors MUST be HSL.
   body {
     @apply bg-background text-foreground;
   }
+}
+
+/* Legal Typography */
+.font-legal-serif {
+  font-family: 'Playfair Display', Georgia, 'Times New Roman', serif;
+}
+
+.font-legal-body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+
+/* JuristMind Verified Seal */
+.legal-seal {
+  position: relative;
+  overflow: hidden;
+}
+
+.legal-seal::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 120px;
+  height: 120px;
+  background: radial-gradient(circle at center, hsl(var(--justice-blue) / 0.06) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+/* Legal Card Hover Effect */
+.legal-card-hover {
+  transition: var(--transition-smooth);
+}
+
+.legal-card-hover:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-legal);
+}
+
+/* Verification Glow Animation */
+@keyframes verificationGlow {
+  0%, 100% {
+    box-shadow: 0 0 0 0 hsl(var(--status-verified) / 0.4);
+  }
+  50% {
+    box-shadow: 0 0 20px 4px hsl(var(--status-verified) / 0.2);
+  }
+}
+
+.verification-glow {
+  animation: verificationGlow 2s ease-in-out;
 }
