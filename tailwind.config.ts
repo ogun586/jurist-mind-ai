@@ -62,22 +62,48 @@ export default {
 					'accent-foreground': 'hsl(var(--sidebar-accent-foreground))',
 					border: 'hsl(var(--sidebar-border))',
 					ring: 'hsl(var(--sidebar-ring))'
+				},
+				// Legal Authority Vault Colors
+				'justice-blue': {
+					DEFAULT: 'hsl(var(--justice-blue))',
+					foreground: 'hsl(var(--justice-blue-foreground))',
+					muted: 'hsl(var(--justice-blue-muted))'
+				},
+				'status-pending': {
+					DEFAULT: 'hsl(var(--status-pending))',
+					foreground: 'hsl(var(--status-pending-foreground))'
+				},
+				'status-verified': {
+					DEFAULT: 'hsl(var(--status-verified))',
+					foreground: 'hsl(var(--status-verified-foreground))'
+				},
+				'status-rejected': {
+					DEFAULT: 'hsl(var(--status-rejected))',
+					foreground: 'hsl(var(--status-rejected-foreground))'
 				}
 			},
 			backgroundImage: {
 				'gradient-primary': 'var(--gradient-primary)',
 				'gradient-surface': 'var(--gradient-surface)',
-				'gradient-accent': 'var(--gradient-accent)'
+				'gradient-accent': 'var(--gradient-accent)',
+				'gradient-legal': 'var(--gradient-legal)',
+				'gradient-charcoal': 'var(--gradient-charcoal)',
+				'gradient-verified': 'var(--gradient-verified)'
 			},
 			boxShadow: {
 				'sm': 'var(--shadow-sm)',
 				'md': 'var(--shadow-md)',
 				'lg': 'var(--shadow-lg)',
-				'glow': 'var(--shadow-glow)'
+				'glow': 'var(--shadow-glow)',
+				'legal': 'var(--shadow-legal)'
 			},
 			transitionProperty: {
 				'smooth': 'var(--transition-smooth)',
 				'fast': 'var(--transition-fast)'
+			},
+			fontFamily: {
+				'legal-serif': ['Playfair Display', 'Georgia', 'Times New Roman', 'serif'],
+				'legal-body': ['Inter', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'sans-serif']
 			},
 			borderRadius: {
 				lg: 'var(--radius)',
