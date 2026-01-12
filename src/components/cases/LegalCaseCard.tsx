@@ -11,7 +11,6 @@ import {
   Shield,
   Tag,
   CheckCircle2,
-  AlertCircle,
 } from "lucide-react";
 
 interface JudgeNote {
@@ -40,21 +39,21 @@ export function LegalCaseCard({ note, onClick }: LegalCaseCardProps) {
     switch (status) {
       case "verified":
         return {
-          label: "Active & Verified",
+          label: "Verified",
           icon: CheckCircle2,
-          className: "bg-status-verified text-status-verified-foreground",
+          className: "bg-[hsl(145,35%,38%)]/10 text-[hsl(145,35%,38%)] border-[hsl(145,35%,38%)]/20",
         };
       case "rejected":
         return {
           label: "Rejected",
-          icon: AlertCircle,
-          className: "bg-status-rejected text-status-rejected-foreground",
+          icon: Clock,
+          className: "bg-[hsl(0,45%,45%)]/10 text-[hsl(0,45%,45%)] border-[hsl(0,45%,45%)]/20",
         };
       default:
         return {
           label: "Pending Review",
           icon: Clock,
-          className: "bg-status-pending text-status-pending-foreground",
+          className: "bg-[hsl(35,30%,50%)]/10 text-[hsl(35,30%,50%)] border-[hsl(35,30%,50%)]/20",
         };
     }
   };
@@ -62,7 +61,7 @@ export function LegalCaseCard({ note, onClick }: LegalCaseCardProps) {
   const statusConfig = getStatusConfig();
   const StatusIcon = statusConfig.icon;
 
-  const truncateContent = (content: string, maxLength: number = 180) => {
+  const truncateContent = (content: string, maxLength: number = 160) => {
     if (content.length <= maxLength) return content;
     return content.substring(0, maxLength) + "...";
   };
@@ -92,25 +91,25 @@ export function LegalCaseCard({ note, onClick }: LegalCaseCardProps) {
 
   return (
     <Card
-      className={`group legal-card-hover cursor-pointer overflow-hidden border-2 ${
+      className={`group legal-card-hover cursor-pointer overflow-hidden border ${
         isVerified
-          ? "border-justice-blue/20 legal-seal"
-          : "border-border hover:border-primary/20"
-      }`}
+          ? "border-[hsl(145,35%,38%)]/20 legal-seal"
+          : "border-border"
+      } bg-card`}
       onClick={onClick}
     >
-      <CardHeader className="pb-3">
+      <CardHeader className="pb-3 pt-5 px-5">
         <div className="flex items-start justify-between gap-4">
           <div className="flex-1 min-w-0">
             {/* Status Badge & Time */}
             <div className="flex items-center gap-2 mb-3 flex-wrap">
-              <Badge className={`gap-1 ${statusConfig.className}`}>
+              <Badge variant="outline" className={`gap-1 text-xs font-medium ${statusConfig.className}`}>
                 <StatusIcon className="w-3 h-3" />
                 {statusConfig.label}
               </Badge>
               <Badge
                 variant="outline"
-                className="bg-justice-blue-muted text-justice-blue border-justice-blue/20"
+                className="bg-muted/50 text-muted-foreground border-border text-xs font-normal"
               >
                 {note.category}
               </Badge>
@@ -121,93 +120,88 @@ export function LegalCaseCard({ note, onClick }: LegalCaseCardProps) {
             </div>
 
             {/* Case Title - Serif Typography */}
-            <h3 className="font-legal-serif text-xl md:text-2xl font-semibold text-foreground group-hover:text-justice-blue transition-colors leading-tight line-clamp-2">
+            <h3 className="font-legal-serif text-lg md:text-xl font-semibold text-foreground group-hover:text-foreground/80 transition-colors leading-snug line-clamp-2">
               {note.title}
             </h3>
 
             {/* Case Citation */}
             {note.case_suit_number && (
-              <p className="text-sm text-muted-foreground mt-1 font-medium tracking-wide">
+              <p className="text-xs text-muted-foreground mt-1 font-medium tracking-wide uppercase">
                 {note.case_suit_number}
               </p>
             )}
           </div>
 
-          {/* Verified Seal Icon */}
-          {isVerified && (
-            <div className="relative shrink-0">
-              <div className="w-14 h-14 rounded-full bg-gradient-to-br from-justice-blue to-justice-blue/80 flex items-center justify-center shadow-lg">
-                <Shield className="w-7 h-7 text-justice-blue-foreground" />
-              </div>
-              <div className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-status-verified flex items-center justify-center">
-                <CheckCircle2 className="w-3.5 h-3.5 text-status-verified-foreground" />
+          {/* Arrow or Verified Icon */}
+          {isVerified ? (
+            <div className="shrink-0">
+              <div className="w-10 h-10 rounded-full bg-[hsl(145,35%,38%)]/10 flex items-center justify-center">
+                <Shield className="w-5 h-5 text-[hsl(145,35%,38%)]" />
               </div>
             </div>
-          )}
-
-          {!isVerified && (
-            <ChevronRight className="w-5 h-5 text-muted-foreground group-hover:text-justice-blue group-hover:translate-x-1 transition-all shrink-0 mt-1" />
+          ) : (
+            <ChevronRight className="w-5 h-5 text-muted-foreground group-hover:text-foreground group-hover:translate-x-0.5 transition-all shrink-0 mt-1" />
           )}
         </div>
       </CardHeader>
 
-      <CardContent className="pt-0">
+      <CardContent className="pt-0 px-5 pb-5">
         {/* Metadata Row */}
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-muted-foreground mb-4 font-legal-body">
-          <span className="flex items-center gap-1.5">
-            <User className="w-4 h-4 text-justice-blue/70" />
-            <span className="font-medium">{note.judge_name}</span>
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground mb-3 font-legal-body">
+          <span className="flex items-center gap-1">
+            <User className="w-3.5 h-3.5" />
+            <span className="font-medium text-foreground/80">{note.judge_name}</span>
           </span>
-          <span className="flex items-center gap-1.5">
-            <Building className="w-4 h-4 text-justice-blue/70" />
+          <span className="flex items-center gap-1">
+            <Building className="w-3.5 h-3.5" />
             {note.court}
           </span>
-          <span className="flex items-center gap-1.5">
-            <Calendar className="w-4 h-4 text-justice-blue/70" />
+          <span className="flex items-center gap-1">
+            <Calendar className="w-3.5 h-3.5" />
             {formatDate(note.created_at)}
           </span>
         </div>
 
         {/* Content Preview */}
-        <p className="text-muted-foreground mb-4 leading-relaxed font-legal-body">
+        <p className="text-muted-foreground text-sm mb-4 leading-relaxed font-legal-body">
           {truncateContent(note.content)}
         </p>
 
         {/* Tags */}
         {note.tags.length > 0 && (
-          <div className="flex items-center gap-2 flex-wrap">
-            <Tag className="w-4 h-4 text-muted-foreground shrink-0" />
-            {note.tags.slice(0, 4).map((tag, index) => (
+          <div className="flex items-center gap-1.5 flex-wrap mb-4">
+            <Tag className="w-3 h-3 text-muted-foreground shrink-0" />
+            {note.tags.slice(0, 3).map((tag, index) => (
               <Badge
                 key={index}
                 variant="secondary"
-                className="text-xs font-normal bg-muted/60"
+                className="text-xs font-normal bg-muted/60 text-muted-foreground px-2 py-0"
               >
                 {tag}
               </Badge>
             ))}
-            {note.tags.length > 4 && (
+            {note.tags.length > 3 && (
               <span className="text-xs text-muted-foreground">
-                +{note.tags.length - 4} more
+                +{note.tags.length - 3}
               </span>
             )}
           </div>
         )}
 
         {/* CTA Footer */}
-        <div className="mt-4 pt-4 border-t flex items-center justify-between">
+        <div className="pt-3 border-t border-border flex items-center justify-between">
           <div className="flex items-center gap-2">
             {note.has_ctc && (
               <Badge
                 variant="outline"
-                className="gap-1 text-xs bg-status-verified/10 text-status-verified border-status-verified/30"
+                className="gap-1 text-xs bg-[hsl(145,35%,38%)]/5 text-[hsl(145,35%,38%)] border-[hsl(145,35%,38%)]/20"
               >
                 <FileText className="w-3 h-3" />
                 CTC Available
               </Badge>
             )}
             {!note.has_ctc && (
-              <span className="text-sm text-muted-foreground">
+              <span className="text-xs text-muted-foreground">
                 Click to view full report
               </span>
             )}
@@ -215,9 +209,9 @@ export function LegalCaseCard({ note, onClick }: LegalCaseCardProps) {
           <Button
             variant="outline"
             size="sm"
-            className="gap-1.5 group-hover:bg-justice-blue group-hover:text-justice-blue-foreground group-hover:border-justice-blue transition-colors"
+            className="gap-1.5 text-xs h-8 bg-transparent border-border hover:bg-foreground hover:text-background hover:border-foreground transition-colors"
           >
-            <FileText className="w-4 h-4" />
+            <FileText className="w-3.5 h-3.5" />
             View Report
           </Button>
         </div>

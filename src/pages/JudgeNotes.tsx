@@ -4,9 +4,10 @@ import {
   Search,
   Filter,
   Building,
-  Scale,
   Shield,
   BookOpen,
+  Loader2,
+  ArrowRight,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -74,7 +75,7 @@ export default function JudgeNotes() {
       // Simulate some notes having CTC and verified status for demo
       const enrichedNotes = (data || []).map((note: JudgeNote, index: number) => ({
         ...note,
-        has_ctc: index % 3 === 0, // Every 3rd note has CTC
+        has_ctc: index % 3 === 0,
         status: index % 3 === 0 ? "verified" : "pending" as const,
       }));
       setNotes(enrichedNotes);
@@ -90,7 +91,6 @@ export default function JudgeNotes() {
   const handleSearch = () => {
     let filtered = notes;
 
-    // Apply search term filter
     if (searchTerm) {
       filtered = filtered.filter(
         (note) =>
@@ -105,17 +105,14 @@ export default function JudgeNotes() {
       );
     }
 
-    // Apply category filter
     if (categoryFilter !== "all") {
       filtered = filtered.filter((note) => note.category === categoryFilter);
     }
 
-    // Apply court filter
     if (courtFilter !== "all") {
       filtered = filtered.filter((note) => note.court === courtFilter);
     }
 
-    // Apply status filter
     if (statusFilter !== "all") {
       filtered = filtered.filter((note) => note.status === statusFilter);
     }
@@ -133,13 +130,13 @@ export default function JudgeNotes() {
 
   if (loading) {
     return (
-      <div className="h-full bg-gradient-legal flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-16 h-16 rounded-full bg-justice-blue/10 flex items-center justify-center mx-auto mb-4">
-            <Scale className="w-8 h-8 text-justice-blue animate-pulse" />
+      <div className="h-full bg-background flex items-center justify-center">
+        <div className="text-center animate-fade-in">
+          <div className="w-12 h-12 rounded-full border-2 border-muted flex items-center justify-center mx-auto mb-4">
+            <Loader2 className="w-5 h-5 text-muted-foreground animate-spin" />
           </div>
-          <p className="text-muted-foreground font-legal-body">
-            Loading Legal Repository...
+          <p className="text-muted-foreground font-legal-body text-sm">
+            Loading case reports...
           </p>
         </div>
       </div>
@@ -147,91 +144,95 @@ export default function JudgeNotes() {
   }
 
   return (
-    <div className="h-full bg-gradient-legal overflow-y-auto">
-      <div className="max-w-7xl mx-auto p-4 md:p-6 lg:p-8">
-        {/* Authority Vault Header */}
-        <div className="mb-10">
-          {/* Badge */}
-          <div className="flex items-center gap-2 mb-4">
-            <div className="flex items-center gap-2 px-4 py-2 bg-justice-blue/10 rounded-full border border-justice-blue/20">
-              <Scale className="w-4 h-4 text-justice-blue" />
-              <span className="text-sm font-medium text-justice-blue uppercase tracking-wider font-legal-body">
-                Legal Authority Vault
-              </span>
-            </div>
-          </div>
-
-          {/* Title */}
-          <h1 className="font-legal-serif text-4xl md:text-5xl font-bold text-foreground mb-4 leading-tight">
+    <div className="h-full bg-background overflow-y-auto">
+      <div className="max-w-5xl mx-auto p-6 md:p-8 lg:p-10">
+        {/* Header Section - Clean, Institutional */}
+        <div className="mb-10 animate-fade-in">
+          {/* Main Title */}
+          <h1 className="font-legal-serif text-3xl md:text-4xl font-bold text-foreground mb-3 tracking-tight">
             Latest Cases Report
           </h1>
 
           {/* Description */}
-          <p className="text-muted-foreground text-lg max-w-3xl font-legal-body leading-relaxed">
-            Access instant case reports from lawyers directly from the court
-            room. View and download Certified True Copies (CTC) of judgments
-            with complete authenticity verification.
+          <p className="text-muted-foreground text-base max-w-2xl font-legal-body leading-relaxed mb-6">
+            Access instant case reports from lawyers directly from the courtroom. 
+            View and download Certified True Copies (CTC) of judgments with complete 
+            authenticity verification.
           </p>
 
-          {/* Stats Row */}
-          <div className="flex flex-wrap gap-6 mt-6">
-            <div className="flex items-center gap-3 px-4 py-3 bg-card rounded-xl border shadow-sm">
-              <div className="w-10 h-10 rounded-lg bg-justice-blue/10 flex items-center justify-center">
-                <BookOpen className="w-5 h-5 text-justice-blue" />
+          {/* Primary Action */}
+          <Button 
+            className="bg-[hsl(350,45%,35%)] hover:bg-[hsl(350,45%,28%)] text-white font-medium px-6 h-11 rounded-lg transition-colors duration-200"
+          >
+            View Verified Cases
+            <ArrowRight className="w-4 h-4 ml-2" />
+          </Button>
+        </div>
+
+        {/* Stats Row - Subtle, Professional */}
+        <div className="grid grid-cols-3 gap-4 mb-8 animate-fade-in" style={{ animationDelay: '50ms' }}>
+          <div className="legal-container p-4">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-lg bg-muted flex items-center justify-center">
+                <BookOpen className="w-4 h-4 text-foreground" />
               </div>
               <div>
-                <p className="text-2xl font-bold text-foreground font-legal-serif">
+                <p className="text-xl font-semibold text-foreground font-legal-serif">
                   {notes.length}
                 </p>
                 <p className="text-xs text-muted-foreground">Total Reports</p>
               </div>
             </div>
+          </div>
 
-            <div className="flex items-center gap-3 px-4 py-3 bg-card rounded-xl border shadow-sm">
-              <div className="w-10 h-10 rounded-lg bg-status-verified/10 flex items-center justify-center">
-                <Shield className="w-5 h-5 text-status-verified" />
+          <div className="legal-container p-4">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-lg bg-[hsl(145,35%,38%)]/10 flex items-center justify-center">
+                <Shield className="w-4 h-4 text-[hsl(145,35%,38%)]" />
               </div>
               <div>
-                <p className="text-2xl font-bold text-status-verified font-legal-serif">
+                <p className="text-xl font-semibold text-[hsl(145,35%,38%)] font-legal-serif">
                   {verifiedCount}
                 </p>
-                <p className="text-xs text-muted-foreground">Verified CTCs</p>
+                <p className="text-xs text-muted-foreground">Verified</p>
               </div>
             </div>
+          </div>
 
-            <div className="flex items-center gap-3 px-4 py-3 bg-card rounded-xl border shadow-sm">
-              <div className="w-10 h-10 rounded-lg bg-status-pending/10 flex items-center justify-center">
-                <FileText className="w-5 h-5 text-status-pending" />
+          <div className="legal-container p-4">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-lg bg-[hsl(35,30%,50%)]/10 flex items-center justify-center">
+                <FileText className="w-4 h-4 text-[hsl(35,30%,50%)]" />
               </div>
               <div>
-                <p className="text-2xl font-bold text-foreground font-legal-serif">
+                <p className="text-xl font-semibold text-foreground font-legal-serif">
                   {pendingCount}
                 </p>
-                <p className="text-xs text-muted-foreground">Pending Review</p>
+                <p className="text-xs text-muted-foreground">Pending</p>
               </div>
             </div>
           </div>
         </div>
 
         {/* Search and Filters */}
-        <div className="bg-card border-2 rounded-2xl p-5 mb-8 shadow-sm">
+        <div className="legal-container p-5 mb-6 animate-fade-in" style={{ animationDelay: '100ms' }}>
           <div className="flex flex-col lg:flex-row gap-4">
             {/* Search Input */}
             <div className="flex-1 relative">
-              <Search className="w-5 h-5 absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground" />
+              <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
               <Input
                 placeholder="Search by title, judge, court, or keywords..."
-                className="pl-12 h-12 text-base font-legal-body border-2 focus:border-justice-blue"
+                className="pl-10 h-11 text-sm font-legal-body bg-background border-border focus:border-foreground focus:ring-0 transition-colors"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
             </div>
 
             {/* Filters */}
-            <div className="flex flex-wrap gap-3">
+            <div className="flex flex-wrap gap-2">
               <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="w-[160px] h-12 border-2">
-                  <Shield className="w-4 h-4 mr-2 text-muted-foreground" />
+                <SelectTrigger className="w-[140px] h-11 bg-background border-border">
+                  <Shield className="w-3.5 h-3.5 mr-2 text-muted-foreground" />
                   <SelectValue placeholder="Status" />
                 </SelectTrigger>
                 <SelectContent>
@@ -242,8 +243,8 @@ export default function JudgeNotes() {
               </Select>
 
               <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-                <SelectTrigger className="w-[160px] h-12 border-2">
-                  <Filter className="w-4 h-4 mr-2 text-muted-foreground" />
+                <SelectTrigger className="w-[140px] h-11 bg-background border-border">
+                  <Filter className="w-3.5 h-3.5 mr-2 text-muted-foreground" />
                   <SelectValue placeholder="Category" />
                 </SelectTrigger>
                 <SelectContent>
@@ -257,8 +258,8 @@ export default function JudgeNotes() {
               </Select>
 
               <Select value={courtFilter} onValueChange={setCourtFilter}>
-                <SelectTrigger className="w-[180px] h-12 border-2">
-                  <Building className="w-4 h-4 mr-2 text-muted-foreground" />
+                <SelectTrigger className="w-[160px] h-11 bg-background border-border">
+                  <Building className="w-3.5 h-3.5 mr-2 text-muted-foreground" />
                   <SelectValue placeholder="Court" />
                 </SelectTrigger>
                 <SelectContent>
@@ -280,49 +281,49 @@ export default function JudgeNotes() {
             courtFilter !== "all" ||
             statusFilter !== "all" ||
             searchTerm) && (
-            <div className="flex items-center gap-2 mt-4 pt-4 border-t flex-wrap">
-              <span className="text-sm text-muted-foreground font-legal-body">
-                Active filters:
+            <div className="flex items-center gap-2 mt-4 pt-4 border-t border-border flex-wrap">
+              <span className="text-xs text-muted-foreground font-legal-body">
+                Active:
               </span>
               {searchTerm && (
-                <Badge variant="secondary" className="gap-1">
-                  Search: "{searchTerm}"
+                <Badge variant="secondary" className="gap-1 text-xs font-normal">
+                  "{searchTerm}"
                   <button
                     onClick={() => setSearchTerm("")}
-                    className="ml-1 hover:text-destructive"
+                    className="ml-1 hover:text-foreground"
                   >
                     ×
                   </button>
                 </Badge>
               )}
               {statusFilter !== "all" && (
-                <Badge variant="secondary" className="gap-1">
+                <Badge variant="secondary" className="gap-1 text-xs font-normal">
                   {statusFilter}
                   <button
                     onClick={() => setStatusFilter("all")}
-                    className="ml-1 hover:text-destructive"
+                    className="ml-1 hover:text-foreground"
                   >
                     ×
                   </button>
                 </Badge>
               )}
               {categoryFilter !== "all" && (
-                <Badge variant="secondary" className="gap-1">
+                <Badge variant="secondary" className="gap-1 text-xs font-normal">
                   {categoryFilter}
                   <button
                     onClick={() => setCategoryFilter("all")}
-                    className="ml-1 hover:text-destructive"
+                    className="ml-1 hover:text-foreground"
                   >
                     ×
                   </button>
                 </Badge>
               )}
               {courtFilter !== "all" && (
-                <Badge variant="secondary" className="gap-1">
+                <Badge variant="secondary" className="gap-1 text-xs font-normal">
                   {courtFilter}
                   <button
                     onClick={() => setCourtFilter("all")}
-                    className="ml-1 hover:text-destructive"
+                    className="ml-1 hover:text-foreground"
                   >
                     ×
                   </button>
@@ -337,7 +338,7 @@ export default function JudgeNotes() {
                   setCourtFilter("all");
                   setStatusFilter("all");
                 }}
-                className="text-muted-foreground hover:text-foreground"
+                className="text-xs text-muted-foreground hover:text-foreground h-7"
               >
                 Clear all
               </Button>
@@ -346,46 +347,51 @@ export default function JudgeNotes() {
         </div>
 
         {/* Results Count */}
-        <div className="flex items-center justify-between mb-6">
-          <p className="text-sm text-muted-foreground font-legal-body">
+        <div className="flex items-center justify-between mb-4 animate-fade-in" style={{ animationDelay: '150ms' }}>
+          <p className="text-xs text-muted-foreground font-legal-body">
             Showing{" "}
-            <span className="font-semibold text-foreground">
+            <span className="font-medium text-foreground">
               {filteredNotes.length}
             </span>{" "}
-            of {notes.length} case reports
+            of {notes.length} reports
           </p>
         </div>
 
         {/* Case Reports Grid */}
-        <div className="grid gap-6">
-          {filteredNotes.map((note) => (
-            <LegalCaseCard
-              key={note.id}
-              note={note}
-              onClick={() => handleReadFullNote(note.id)}
-            />
+        <div className="grid gap-4">
+          {filteredNotes.map((note, index) => (
+            <div 
+              key={note.id} 
+              className="animate-fade-in"
+              style={{ animationDelay: `${200 + index * 50}ms` }}
+            >
+              <LegalCaseCard
+                note={note}
+                onClick={() => handleReadFullNote(note.id)}
+              />
+            </div>
           ))}
 
           {filteredNotes.length === 0 && !loading && (
-            <div className="text-center py-20 px-6">
-              <div className="w-24 h-24 rounded-full bg-justice-blue/10 flex items-center justify-center mx-auto mb-6">
-                <Scale className="w-12 h-12 text-justice-blue/60" />
+            <div className="text-center py-16 px-6 animate-fade-in">
+              <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mx-auto mb-4">
+                <FileText className="w-7 h-7 text-muted-foreground" />
               </div>
-              <h3 className="font-legal-serif text-2xl font-semibold text-foreground mb-3">
+              <h3 className="font-legal-serif text-xl font-semibold text-foreground mb-2">
                 {searchTerm ||
                 categoryFilter !== "all" ||
                 courtFilter !== "all" ||
                 statusFilter !== "all"
-                  ? "No matching case reports"
+                  ? "No matching reports"
                   : "No case reports yet"}
               </h3>
-              <p className="text-muted-foreground mb-8 max-w-md mx-auto font-legal-body">
+              <p className="text-muted-foreground text-sm mb-6 max-w-md mx-auto font-legal-body">
                 {searchTerm ||
                 categoryFilter !== "all" ||
                 courtFilter !== "all" ||
                 statusFilter !== "all"
-                  ? "Try adjusting your search criteria or filters"
-                  : "Be the first to add a case report and help build our legal repository"}
+                  ? "Try adjusting your search criteria"
+                  : "Be the first to add a case report"}
               </p>
               {!(
                 searchTerm ||

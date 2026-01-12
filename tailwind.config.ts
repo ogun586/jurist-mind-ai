@@ -63,7 +63,12 @@ export default {
 					border: 'hsl(var(--sidebar-border))',
 					ring: 'hsl(var(--sidebar-ring))'
 				},
-				// Legal Authority Vault Colors
+				// Legal Authority Vault Colors - Neutral Palette
+				'legal-burgundy': {
+					DEFAULT: 'hsl(var(--legal-burgundy))',
+					foreground: 'hsl(var(--legal-burgundy-foreground))',
+					muted: 'hsl(var(--legal-burgundy-muted))'
+				},
 				'justice-blue': {
 					DEFAULT: 'hsl(var(--justice-blue))',
 					foreground: 'hsl(var(--justice-blue-foreground))',
@@ -85,10 +90,10 @@ export default {
 			backgroundImage: {
 				'gradient-primary': 'var(--gradient-primary)',
 				'gradient-surface': 'var(--gradient-surface)',
-				'gradient-accent': 'var(--gradient-accent)',
 				'gradient-legal': 'var(--gradient-legal)',
 				'gradient-charcoal': 'var(--gradient-charcoal)',
-				'gradient-verified': 'var(--gradient-verified)'
+				'gradient-verified': 'var(--gradient-verified)',
+				'gradient-burgundy': 'var(--gradient-burgundy)'
 			},
 			boxShadow: {
 				'sm': 'var(--shadow-sm)',
