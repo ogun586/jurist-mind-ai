@@ -1,11 +1,11 @@
-import { useState, useEffect, useRef } from "react";
-import { Send, Mic, Paperclip } from "lucide-react";
+import { useState, useEffect, useRef, useCallback } from "react";
+import { Send, Mic, Paperclip, Plus, ArrowDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { NavLink } from "react-router-dom";
+import { NavLink, useSearchParams, useNavigate } from "react-router-dom";
 import { SourceDisplay } from "@/components/SourceDisplay";
 
 interface Message {
@@ -14,7 +14,7 @@ interface Message {
   sender: "user" | "ai";
   timestamp: Date;
   sources?: string[];
-  db_id?: string; // Track database ID for persisted messages
+  db_id?: string;
 }
 
 export function ChatInterface() {
@@ -22,34 +22,79 @@ export function ChatInterface() {
   const [inputValue, setInputValue] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
+  const [showJumpToLatest, setShowJumpToLatest] = useState(false);
   const { user } = useAuth();
   const { toast } = useToast();
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
+  const shouldAutoScrollRef = useRef(true);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
 
-  // Scroll to bottom when messages change
+  // Track scroll position and determine if auto-scroll should happen
+  const handleScroll = useCallback(() => {
+    const container = messagesContainerRef.current;
+    if (!container) return;
+
+    const { scrollTop, scrollHeight, clientHeight } = container;
+    const distanceFromBottom = scrollHeight - scrollTop - clientHeight;
+    const threshold = 150; // pixels from bottom
+
+    // User is near bottom
+    if (distanceFromBottom <= threshold) {
+      shouldAutoScrollRef.current = true;
+      setShowJumpToLatest(false);
+    } else {
+      // User scrolled up
+      shouldAutoScrollRef.current = false;
+      if (messages.length > 0) {
+        setShowJumpToLatest(true);
+      }
+    }
+  }, [messages.length]);
+
+  // Scroll to bottom when messages change (only if user is near bottom)
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    if (shouldAutoScrollRef.current) {
+      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    }
   }, [messages]);
 
-  // Load session from URL or most recent session on mount
+  // Jump to latest handler
+  const handleJumpToLatest = () => {
+    shouldAutoScrollRef.current = true;
+    setShowJumpToLatest(false);
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
+
+  // React to URL changes for session loading
   useEffect(() => {
     if (!user) return;
     
-    const urlParams = new URLSearchParams(window.location.search);
-    const sessionId = urlParams.get('session');
+    const sessionId = searchParams.get('session');
     
-    if (sessionId) {
+    if (sessionId && sessionId !== currentSessionId) {
       loadSession(sessionId);
-    } else {
+    } else if (!sessionId && currentSessionId) {
+      // URL cleared, start fresh
+      setMessages([]);
+      setCurrentSessionId(null);
+    } else if (!sessionId && !currentSessionId) {
+      // Initial load without session param - load most recent
       loadMostRecentSession();
     }
-  }, [user]);
+  }, [user, searchParams]);
 
   // Listen for new chat event from sidebar
   useEffect(() => {
     const handleNewChatEvent = () => {
       setMessages([]);
       setCurrentSessionId(null);
+      shouldAutoScrollRef.current = true;
+      setShowJumpToLatest(false);
+      // Focus input after clearing
+      setTimeout(() => inputRef.current?.focus(), 100);
     };
     
     window.addEventListener('newChat', handleNewChatEvent);
@@ -72,7 +117,6 @@ export function ChatInterface() {
         },
         (payload) => {
           const newMsg = payload.new as any;
-          // Only add if we don't already have this message (by db_id)
           setMessages(prev => {
             if (prev.some(msg => msg.db_id === newMsg.id)) {
               return prev;
@@ -109,7 +153,8 @@ export function ChatInterface() {
       if (error) throw error;
       
       if (data) {
-        await loadSession(data.id);
+        // Update URL without reload
+        navigate(`/?session=${data.id}`, { replace: true });
       }
     } catch (error) {
       console.error('Error loading recent session:', error);
@@ -151,7 +196,6 @@ export function ChatInterface() {
       
       if (error) throw error;
       
-      // Update session's updated_at timestamp
       await supabase
         .from('chat_sessions')
         .update({ updated_at: new Date().toISOString() })
@@ -182,6 +226,16 @@ export function ChatInterface() {
     }
   };
 
+  const handleNewChat = () => {
+    setMessages([]);
+    setCurrentSessionId(null);
+    shouldAutoScrollRef.current = true;
+    setShowJumpToLatest(false);
+    navigate('/', { replace: true });
+    window.dispatchEvent(new CustomEvent('newChat'));
+    setTimeout(() => inputRef.current?.focus(), 100);
+  };
+
   const handleSendMessage = async () => {
     if (!inputValue.trim()) return;
     if (!user) {
@@ -207,7 +261,7 @@ export function ChatInterface() {
             <Button
               variant="outline"
               size="sm"
-              onClick={() => window.location.href = '/upgrade'}
+              onClick={() => navigate('/upgrade')}
             >
               Upgrade Now
             </Button>
@@ -246,10 +300,16 @@ export function ChatInterface() {
         return;
       }
       setCurrentSessionId(sessionId);
+      // Update URL with new session
+      navigate(`/?session=${sessionId}`, { replace: true });
     }
 
     const userMessageContent = inputValue;
     const tempMessageId = Date.now().toString();
+    
+    // Enable auto-scroll when sending a message
+    shouldAutoScrollRef.current = true;
+    setShowJumpToLatest(false);
     
     const newMessage: Message = {
       id: tempMessageId,
@@ -286,7 +346,6 @@ export function ChatInterface() {
     setMessages(prev => [...prev, aiPlaceholder]);
 
     try {
-      // Call Python backend with Grok API - using FormData as backend expects
       const formData = new FormData();
       formData.append('question', userMessageContent);
       if (sessionId) formData.append('chat_id', sessionId);
@@ -301,7 +360,6 @@ export function ChatInterface() {
         throw new Error('Failed to get AI response');
       }
 
-      // Handle streaming SSE response
       if (!response.body) {
         throw new Error('No response body from server');
       }
@@ -342,14 +400,12 @@ export function ChatInterface() {
                 done = true;
               }
             } catch (parseError) {
-              // If not JSON, it might be plain text content
               console.log("Chunk parse info:", parseError);
             }
           }
         }
       }
 
-      // If no streaming content received, try parsing as regular JSON
       if (!fullContent) {
         try {
           const text = await response.text();
@@ -365,7 +421,6 @@ export function ChatInterface() {
         }
       }
       
-      // Save AI response to database
       if (fullContent) {
         const aiDbId = await saveMessage(sessionId, fullContent, 'ai');
         if (aiDbId) {
@@ -375,7 +430,6 @@ export function ChatInterface() {
         }
       }
       
-      // Increment usage count
       try {
         await supabase.functions.invoke('increment-ai-usage', {
           body: { points: 1 }
@@ -394,14 +448,12 @@ export function ChatInterface() {
       
       const errorContent = "I'm having trouble connecting right now. Please try again later.";
       
-      // Update with error message
       setMessages(prev => prev.map(msg => 
         msg.id === aiTempId 
           ? { ...msg, content: errorContent }
           : msg
       ));
       
-      // Save error response
       await saveMessage(sessionId, errorContent, 'ai');
     } finally {
       setIsLoading(false);
@@ -429,7 +481,7 @@ export function ChatInterface() {
       
       const loadedMessages: Message[] = data.map((msg) => ({
         id: msg.id,
-        db_id: msg.id, // Store the database ID
+        db_id: msg.id,
         content: msg.content,
         sender: msg.sender as 'user' | 'ai',
         timestamp: new Date(msg.created_at),
@@ -438,7 +490,14 @@ export function ChatInterface() {
       
       setMessages(loadedMessages);
       setCurrentSessionId(sessionId);
+      shouldAutoScrollRef.current = true;
+      setShowJumpToLatest(false);
       console.log('Loaded', loadedMessages.length, 'messages for session:', sessionId);
+      
+      // Scroll to bottom after loading
+      setTimeout(() => {
+        messagesEndRef.current?.scrollIntoView({ behavior: "auto" });
+      }, 100);
     } catch (error) {
       console.error('Error loading session:', error);
       toast({
@@ -449,11 +508,6 @@ export function ChatInterface() {
     } finally {
       setIsLoading(false);
     }
-  };
-
-  const startNewChat = () => {
-    setMessages([]);
-    setCurrentSessionId(null);
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
@@ -467,13 +521,26 @@ export function ChatInterface() {
     <div className="flex h-full bg-background">
       {/* Main Chat Area */}
       <div className="flex flex-col flex-1 h-full">
-        {/* Header */}
+        {/* Header with New Chat button */}
         <div className="flex items-center justify-between p-4 border-b border-border">
           <h1 className="text-xl font-semibold">JURIST MIND</h1>
+          <Button
+            onClick={handleNewChat}
+            variant="outline"
+            size="sm"
+            className="flex items-center gap-2 min-w-[100px] h-10"
+          >
+            <Plus className="w-4 h-4" />
+            New Chat
+          </Button>
         </div>
         
-        {/* Messages Area */}
-        <div className="flex-1 overflow-y-auto">
+        {/* Messages Area with scroll tracking */}
+        <div 
+          ref={messagesContainerRef}
+          onScroll={handleScroll}
+          className="flex-1 overflow-y-auto relative"
+        >
           <div className="max-w-4xl mx-auto p-6">
             {messages.length === 0 ? (
               <div className="text-center py-20">
@@ -483,7 +550,7 @@ export function ChatInterface() {
                 </p>
                 {!user && (
                   <Button 
-                    onClick={() => window.location.href = '/auth'}
+                    onClick={() => navigate('/auth')}
                     className="mt-4 bg-foreground text-background hover:bg-foreground/90"
                   >
                     Sign In to Continue
@@ -505,7 +572,7 @@ export function ChatInterface() {
                       }`}
                     >
                       {message.content ? (
-                        <p className="text-sm leading-relaxed">{message.content}</p>
+                        <p className="text-sm leading-relaxed whitespace-pre-wrap">{message.content}</p>
                       ) : (
                         <p className="text-sm leading-relaxed text-muted-foreground">Thinking...</p>
                       )}
@@ -522,6 +589,18 @@ export function ChatInterface() {
               </div>
             )}
           </div>
+          
+          {/* Jump to Latest button */}
+          {showJumpToLatest && (
+            <Button
+              onClick={handleJumpToLatest}
+              className="fixed bottom-32 left-1/2 transform -translate-x-1/2 z-10 shadow-lg flex items-center gap-2 bg-foreground text-background hover:bg-foreground/90"
+              size="sm"
+            >
+              <ArrowDown className="w-4 h-4" />
+              Jump to latest
+            </Button>
+          )}
         </div>
 
         {/* Input Area */}
@@ -537,6 +616,7 @@ export function ChatInterface() {
               </Button>
               <div className="flex-1 relative">
                 <Input
+                  ref={inputRef}
                   value={inputValue}
                   onChange={(e) => setInputValue(e.target.value)}
                   onKeyPress={handleKeyPress}
