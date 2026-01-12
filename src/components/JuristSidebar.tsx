@@ -35,7 +35,6 @@ export function JuristSidebar() {
   const navigate = useNavigate();
   const currentPath = location.pathname;
   const collapsed = state === "collapsed";
-  const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
   const [showChatHistory, setShowChatHistory] = useState(false);
 
   const isActive = (path: string) => currentPath === path;
@@ -44,13 +43,7 @@ export function JuristSidebar() {
       ? "bg-sidebar-accent text-sidebar-primary-foreground font-medium border-l-2 border-sidebar-primary"
       : "text-sidebar-foreground hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground";
 
-  const handleSelectSession = (sessionId: string) => {
-    setCurrentSessionId(sessionId);
-    navigate(`/?session=${sessionId}`);
-  };
-
   const handleNewChat = () => {
-    setCurrentSessionId(null);
     // Clear URL params and navigate to fresh chat
     navigate('/', { replace: true });
     // Dispatch custom event to notify ChatInterface
@@ -115,9 +108,7 @@ export function JuristSidebar() {
             {showChatHistory && (
               <SidebarGroupContent>
                 <ChatHistory 
-                  onSelectSession={handleSelectSession}
                   onNewChat={handleNewChat}
-                  currentSessionId={currentSessionId}
                   compact={true}
                 />
               </SidebarGroupContent>
