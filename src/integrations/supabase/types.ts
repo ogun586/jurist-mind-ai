@@ -402,6 +402,66 @@ export type Database = {
         }
         Relationships: []
       }
+      documents: {
+        Row: {
+          approved_at: string | null
+          approved_by: string | null
+          created_at: string | null
+          description: string | null
+          download_count: number | null
+          file_path: string
+          file_size: number
+          file_url: string
+          id: string
+          page_count: number | null
+          rejection_reason: string | null
+          status: string
+          title: string
+          updated_at: string | null
+          uploader_id: string
+          uploader_name: string | null
+          view_count: number | null
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string | null
+          description?: string | null
+          download_count?: number | null
+          file_path: string
+          file_size: number
+          file_url: string
+          id?: string
+          page_count?: number | null
+          rejection_reason?: string | null
+          status?: string
+          title: string
+          updated_at?: string | null
+          uploader_id: string
+          uploader_name?: string | null
+          view_count?: number | null
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string | null
+          description?: string | null
+          download_count?: number | null
+          file_path?: string
+          file_size?: number
+          file_url?: string
+          id?: string
+          page_count?: number | null
+          rejection_reason?: string | null
+          status?: string
+          title?: string
+          updated_at?: string | null
+          uploader_id?: string
+          uploader_name?: string | null
+          view_count?: number | null
+        }
+        Relationships: []
+      }
       email_verification_codes: {
         Row: {
           code: string
@@ -1256,6 +1316,11 @@ export type Database = {
         Args: { job_id: string }
         Returns: undefined
       }
+      increment_document_downloads: {
+        Args: { doc_id: string }
+        Returns: undefined
+      }
+      increment_document_views: { Args: { doc_id: string }; Returns: undefined }
       increment_lawyer_views: {
         Args: { lawyer_slug: string }
         Returns: undefined
