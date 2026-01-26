@@ -210,3 +210,70 @@ All colors MUST be HSL.
   box-shadow: var(--shadow-sm);
   border: 1px solid hsl(var(--border));
 }
+
+/* ============================================
+   MARKETPLACE DESIGN SYSTEM - Clean Minimal
+   ============================================ */
+
+/* Marketplace Card */
+.marketplace-card {
+  background: hsl(var(--card));
+  border-radius: 12px;
+  border: 1px solid hsl(var(--border) / 0.5);
+  box-shadow: 0 1px 3px hsl(0 0% 0% / 0.08);
+  transition: box-shadow 0.25s ease, border-color 0.25s ease;
+}
+
+.marketplace-card:hover {
+  box-shadow: 0 4px 12px hsl(0 0% 0% / 0.1);
+  border-color: hsl(var(--border));
+}
+
+/* Marketplace Preview Area */
+.marketplace-preview {
+  background: hsl(var(--muted) / 0.5);
+  border-radius: 12px 12px 0 0;
+}
+
+/* Skeleton Pulse Animation */
+@keyframes skeleton-pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+.skeleton-pulse {
+  animation: skeleton-pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* Marketplace Button - Teal accent */
+.marketplace-btn-primary {
+  background: hsl(168 80% 32%);
+  color: hsl(0 0% 100%);
+  transition: background 0.2s ease;
+}
+
+.marketplace-btn-primary:hover {
+  background: hsl(168 80% 26%);
+}
+
+/* Clean Input Focus */
+.marketplace-input:focus {
+  border-color: hsl(168 80% 32%);
+  outline: none;
+  box-shadow: 0 0 0 2px hsl(168 80% 32% / 0.1);
+}
+
+/* Tab Underline Active */
+.marketplace-tab-active {
+  border-bottom: 3px solid hsl(168 80% 32%);
+  color: hsl(var(--foreground));
+}
+
+/* Subtle Separator */
+.marketplace-separator {
+  color: hsl(var(--muted-foreground) / 0.5);
+}
