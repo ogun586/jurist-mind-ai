@@ -1,15 +1,10 @@
 import { useState, useEffect } from "react";
-import { Search, Filter, Loader2, FileText, SortAsc } from "lucide-react";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { 
-  Select, SelectContent, SelectItem, 
-  SelectTrigger, SelectValue 
-} from "@/components/ui/select";
+import { Search, ChevronDown, FileText, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Document } from "./types";
 import { DocumentCard } from "./DocumentCard";
+import { DocumentCardSkeleton } from "./DocumentCardSkeleton";
 
 interface MarketplaceBrowseProps {
   onViewDocument: (doc: Document) => void;
@@ -17,11 +12,20 @@ interface MarketplaceBrowseProps {
 
 type SortOption = 'newest' | 'oldest' | 'title_asc' | 'title_desc' | 'most_viewed';
 
+const sortLabels: Record<SortOption, string> = {
+  newest: 'Newest first',
+  oldest: 'Oldest first',
+  title_asc: 'Title (A-Z)',
+  title_desc: 'Title (Z-A)',
+  most_viewed: 'Most viewed'
+};
+
 export function MarketplaceBrowse({ onViewDocument }: MarketplaceBrowseProps) {
   const [documents, setDocuments] = useState<Document[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [sortBy, setSortBy] = useState<SortOption>('newest');
+  const [showSortDropdown, setShowSortDropdown] = useState(false);
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
   const [totalCount, setTotalCount] = useState(0);
@@ -51,12 +55,10 @@ export function MarketplaceBrowse({ onViewDocument }: MarketplaceBrowseProps) {
         .select('*', { count: 'exact' })
         .eq('status', 'active');
 
-      // Apply search
       if (searchTerm.trim()) {
         query = query.or(`title.ilike.%${searchTerm}%,description.ilike.%${searchTerm}%`);
       }
 
-      // Apply sorting
       switch (sortBy) {
         case 'newest':
           query = query.order('created_at', { ascending: false });
@@ -106,10 +108,7 @@ export function MarketplaceBrowse({ onViewDocument }: MarketplaceBrowseProps) {
 
   const handleDownload = async (doc: Document) => {
     try {
-      // Increment download count
       await supabase.rpc('increment_document_downloads', { doc_id: doc.id });
-      
-      // Open file in new tab for download
       window.open(doc.file_url, '_blank');
     } catch (error) {
       console.error('Download error:', error);
@@ -119,7 +118,6 @@ export function MarketplaceBrowse({ onViewDocument }: MarketplaceBrowseProps) {
 
   const handleView = async (doc: Document) => {
     try {
-      // Increment view count
       await supabase.rpc('increment_document_views', { doc_id: doc.id });
     } catch (error) {
       console.error('View count error:', error);
@@ -128,31 +126,56 @@ export function MarketplaceBrowse({ onViewDocument }: MarketplaceBrowseProps) {
   };
 
   return (
-    <div className="space-y-6">
-      {/* Search and Filter */}
-      <div className="flex flex-col md:flex-row gap-4">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <Input
+    <div className="space-y-8">
+      {/* Search and Sort Row */}
+      <div className="flex flex-col md:flex-row gap-4 items-stretch md:items-center">
+        {/* Search Input */}
+        <div className="relative flex-1 max-w-xl">
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground/60" />
+          <input
+            type="text"
             placeholder="Search documents..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10"
+            className="w-full h-11 pl-11 pr-4 bg-card border border-border rounded-lg text-foreground placeholder:text-muted-foreground/60 marketplace-input transition-colors"
           />
         </div>
-        <Select value={sortBy} onValueChange={(v) => setSortBy(v as SortOption)}>
-          <SelectTrigger className="w-full md:w-[200px]">
-            <SortAsc className="w-4 h-4 mr-2" />
-            <SelectValue placeholder="Sort by" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="newest">Newest first</SelectItem>
-            <SelectItem value="oldest">Oldest first</SelectItem>
-            <SelectItem value="title_asc">Title (A-Z)</SelectItem>
-            <SelectItem value="title_desc">Title (Z-A)</SelectItem>
-            <SelectItem value="most_viewed">Most viewed</SelectItem>
-          </SelectContent>
-        </Select>
+
+        {/* Sort Dropdown */}
+        <div className="relative">
+          <button
+            onClick={() => setShowSortDropdown(!showSortDropdown)}
+            className="h-11 px-4 bg-card border border-border rounded-lg flex items-center gap-2 text-sm text-muted-foreground hover:border-foreground/20 transition-colors min-w-[180px] justify-between"
+          >
+            <span>Sort by: {sortLabels[sortBy]}</span>
+            <ChevronDown className="w-4 h-4" />
+          </button>
+          
+          {showSortDropdown && (
+            <>
+              <div 
+                className="fixed inset-0 z-40" 
+                onClick={() => setShowSortDropdown(false)} 
+              />
+              <div className="absolute right-0 top-full mt-2 w-48 bg-card border border-border rounded-lg shadow-lg z-50 py-1">
+                {(Object.keys(sortLabels) as SortOption[]).map((option) => (
+                  <button
+                    key={option}
+                    onClick={() => {
+                      setSortBy(option);
+                      setShowSortDropdown(false);
+                    }}
+                    className={`w-full px-4 py-2 text-left text-sm hover:bg-muted transition-colors ${
+                      sortBy === option ? 'text-[hsl(168,80%,32%)] font-medium' : 'text-foreground'
+                    }`}
+                  >
+                    {sortLabels[option]}
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
+        </div>
       </div>
 
       {/* Results Count */}
@@ -164,18 +187,22 @@ export function MarketplaceBrowse({ onViewDocument }: MarketplaceBrowseProps) {
 
       {/* Documents Grid */}
       {loading && documents.length === 0 ? (
-        <div className="flex items-center justify-center py-12">
-          <Loader2 className="w-8 h-8 animate-spin" />
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+          {[...Array(6)].map((_, i) => (
+            <DocumentCardSkeleton key={i} />
+          ))}
         </div>
       ) : documents.length === 0 ? (
-        <div className="text-center py-16">
-          <FileText className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
-          <h3 className="text-lg font-semibold mb-2">No documents available yet</h3>
-          <p className="text-muted-foreground">Be the first to upload!</p>
+        <div className="text-center py-20">
+          <FileText className="w-20 h-20 text-muted-foreground/30 mx-auto mb-6" strokeWidth={1} />
+          <h3 className="text-xl font-semibold text-foreground mb-2">No documents found</h3>
+          <p className="text-sm text-muted-foreground">
+            Try adjusting your search or filters
+          </p>
         </div>
       ) : (
         <>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             {documents.map((doc) => (
               <DocumentCard
                 key={doc.id}
@@ -188,17 +215,17 @@ export function MarketplaceBrowse({ onViewDocument }: MarketplaceBrowseProps) {
 
           {/* Load More */}
           {hasMore && (
-            <div className="text-center pt-6">
-              <Button 
-                variant="outline" 
+            <div className="text-center pt-8">
+              <button 
                 onClick={loadMore}
                 disabled={loading}
+                className="px-6 py-2.5 text-sm font-medium text-muted-foreground bg-muted hover:bg-muted/80 rounded-lg transition-colors disabled:opacity-50 inline-flex items-center gap-2"
               >
                 {loading ? (
-                  <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                  <Loader2 className="w-4 h-4 animate-spin" />
                 ) : null}
                 Load More
-              </Button>
+              </button>
             </div>
           )}
         </>

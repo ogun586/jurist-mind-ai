@@ -1,6 +1,5 @@
 import { useState } from "react";
-import { ShoppingBag, Upload, FileText, Settings, ArrowLeft } from "lucide-react";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { FileText, Upload, FolderOpen, Settings } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { 
   Document,
@@ -13,9 +12,11 @@ import {
 
 const ADMIN_EMAIL = "ogunseun7@gmail.com";
 
+type TabType = 'browse' | 'upload' | 'my-docs' | 'admin';
+
 export default function Marketplace() {
   const { user } = useAuth();
-  const [activeTab, setActiveTab] = useState("browse");
+  const [activeTab, setActiveTab] = useState<TabType>("browse");
   const [viewingDocument, setViewingDocument] = useState<Document | null>(null);
 
   const isAdmin = user?.email === ADMIN_EMAIL;
@@ -46,70 +47,72 @@ export default function Marketplace() {
     );
   }
 
+  const tabs: { id: TabType; label: string; icon: React.ReactNode; show: boolean }[] = [
+    { id: 'browse', label: 'Browse', icon: <FileText className="w-4 h-4" />, show: true },
+    { id: 'upload', label: 'Upload', icon: <Upload className="w-4 h-4" />, show: true },
+    { id: 'my-docs', label: 'My Documents', icon: <FolderOpen className="w-4 h-4" />, show: true },
+    { id: 'admin', label: 'Admin', icon: <Settings className="w-4 h-4" />, show: isAdmin },
+  ];
+
   return (
-    <div className="h-full bg-background overflow-y-auto">
-      <div className="max-w-7xl mx-auto p-6">
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-foreground mb-2 flex items-center gap-3">
-            <FileText className="w-8 h-8 text-primary" />
-            Document Marketplace
-          </h1>
-          <p className="text-muted-foreground">
-            Browse, share, and download free legal documents and templates
-          </p>
+    <div className="min-h-full bg-[hsl(30,10%,98%)]">
+      {/* Clean Header */}
+      <header className="bg-card border-b border-border">
+        <div className="max-w-7xl mx-auto px-6 md:px-12 py-10 md:py-12">
+          <div className="flex items-center gap-4">
+            <FileText className="w-7 h-7 text-foreground" strokeWidth={1.5} />
+            <div>
+              <h1 className="text-3xl md:text-4xl font-semibold text-foreground tracking-tight">
+                Document Marketplace
+              </h1>
+              <p className="text-muted-foreground mt-1 text-base">
+                Browse, share, and download free legal documents and templates
+              </p>
+            </div>
+          </div>
         </div>
+      </header>
 
-        {/* Main Tabs */}
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className={`grid w-full ${isAdmin ? 'grid-cols-4' : 'grid-cols-3'}`}>
-            <TabsTrigger value="browse" className="flex items-center gap-2">
-              <ShoppingBag className="w-4 h-4" />
-              <span className="hidden sm:inline">Browse</span>
-            </TabsTrigger>
-            <TabsTrigger value="upload" className="flex items-center gap-2">
-              <Upload className="w-4 h-4" />
-              <span className="hidden sm:inline">Upload</span>
-            </TabsTrigger>
-            <TabsTrigger value="my-docs" className="flex items-center gap-2">
-              <FileText className="w-4 h-4" />
-              <span className="hidden sm:inline">My Documents</span>
-            </TabsTrigger>
-            {isAdmin && (
-              <TabsTrigger value="admin" className="flex items-center gap-2">
-                <Settings className="w-4 h-4" />
-                <span className="hidden sm:inline">Admin</span>
-              </TabsTrigger>
-            )}
-          </TabsList>
+      {/* Navigation Tabs */}
+      <nav className="bg-card border-b border-border">
+        <div className="max-w-7xl mx-auto px-6 md:px-12">
+          <div className="flex gap-1">
+            {tabs.filter(t => t.show).map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`flex items-center gap-2 px-4 py-3 text-sm font-medium transition-colors border-b-[3px] -mb-px ${
+                  activeTab === tab.id
+                    ? 'border-[hsl(168,80%,32%)] text-foreground'
+                    : 'border-transparent text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                {tab.icon}
+                <span className="hidden sm:inline">{tab.label}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      </nav>
 
-          {/* Browse Tab */}
-          <TabsContent value="browse" className="mt-6">
-            <MarketplaceBrowse onViewDocument={handleViewDocument} />
-          </TabsContent>
+      {/* Main Content */}
+      <main className="max-w-7xl mx-auto px-6 md:px-12 py-8 md:py-10">
+        {activeTab === 'browse' && (
+          <MarketplaceBrowse onViewDocument={handleViewDocument} />
+        )}
 
-          {/* Upload Tab */}
-          <TabsContent value="upload" className="mt-6">
-            <DocumentUploadForm 
-              onSuccess={() => setActiveTab("my-docs")} 
-            />
-          </TabsContent>
+        {activeTab === 'upload' && (
+          <DocumentUploadForm onSuccess={() => setActiveTab("my-docs")} />
+        )}
 
-          {/* My Documents Tab */}
-          <TabsContent value="my-docs" className="mt-6">
-            <UserDocuments 
-              onView={handleViewDocument}
-            />
-          </TabsContent>
+        {activeTab === 'my-docs' && (
+          <UserDocuments onView={handleViewDocument} />
+        )}
 
-          {/* Admin Tab */}
-          {isAdmin && (
-            <TabsContent value="admin" className="mt-6">
-              <AdminDocumentReview />
-            </TabsContent>
-          )}
-        </Tabs>
-      </div>
+        {activeTab === 'admin' && isAdmin && (
+          <AdminDocumentReview />
+        )}
+      </main>
     </div>
   );
 }

@@ -1,7 +1,4 @@
-import { FileText, Eye, Download, Calendar, FileIcon } from "lucide-react";
-import { Card, CardContent, CardFooter } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+import { FileText, Eye, Calendar } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { Document } from "./types";
 
@@ -12,97 +9,76 @@ interface DocumentCardProps {
   showStatus?: boolean;
 }
 
-export function DocumentCard({ document, onView, onDownload, showStatus = false }: DocumentCardProps) {
-  const formatFileSize = (bytes: number): string => {
-    if (bytes < 1024) return bytes + " B";
-    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + " KB";
-    return (bytes / (1024 * 1024)).toFixed(2) + " MB";
-  };
-
-  const truncateDescription = (text: string | null, maxLength: number = 120): string => {
+export function DocumentCard({ document, onView, showStatus = false }: DocumentCardProps) {
+  const truncateDescription = (text: string | null, maxLength: number = 100): string => {
     if (!text) return "No description available";
     if (text.length <= maxLength) return text;
     return text.substring(0, maxLength).trim() + "...";
   };
 
-  const getStatusBadge = () => {
+  const getStatusStyles = () => {
     switch (document.status) {
       case 'active':
-        return <Badge variant="default" className="bg-green-500 hover:bg-green-600">Active</Badge>;
+        return 'bg-[hsl(145,35%,38%)] text-white';
       case 'pending':
-        return <Badge variant="secondary" className="bg-yellow-500 text-black hover:bg-yellow-600">Pending</Badge>;
+        return 'bg-[hsl(35,90%,52%)] text-[hsl(35,40%,15%)]';
       case 'rejected':
-        return <Badge variant="destructive">Rejected</Badge>;
+        return 'bg-[hsl(0,60%,50%)] text-white';
+      default:
+        return 'bg-muted text-muted-foreground';
     }
   };
 
   return (
-    <Card className="flex flex-col h-full hover:shadow-lg transition-shadow group">
-      <CardContent className="flex-1 p-4">
-        {/* Document Icon/Thumbnail */}
-        <div className="w-full h-32 bg-muted rounded-lg flex items-center justify-center mb-4 group-hover:bg-muted/80 transition-colors">
-          <FileText className="w-16 h-16 text-primary/60" />
-        </div>
+    <div className="marketplace-card flex flex-col h-full overflow-hidden">
+      {/* Document Preview Area */}
+      <div className="marketplace-preview h-60 flex items-center justify-center relative">
+        <FileText className="w-16 h-16 text-muted-foreground/40" strokeWidth={1.5} />
+        
+        {/* Status Badge - Only show when requested */}
+        {showStatus && (
+          <span className={`absolute top-3 right-3 px-2 py-1 text-xs font-medium rounded ${getStatusStyles()}`}>
+            {document.status.charAt(0).toUpperCase() + document.status.slice(1)}
+          </span>
+        )}
+      </div>
 
-        {/* Title & Status */}
-        <div className="flex items-start justify-between gap-2 mb-2">
-          <h3 className="font-semibold text-lg line-clamp-2 flex-1">{document.title}</h3>
-          {showStatus && getStatusBadge()}
-        </div>
+      {/* Card Body */}
+      <div className="flex flex-col flex-1 p-5">
+        {/* Title */}
+        <h3 className="font-semibold text-lg text-foreground leading-tight line-clamp-2 mb-2 tracking-tight">
+          {document.title}
+        </h3>
 
         {/* Description */}
-        <p className="text-sm text-muted-foreground line-clamp-3 mb-3">
+        <p className="text-sm text-muted-foreground leading-relaxed line-clamp-2 mb-4 flex-1">
           {truncateDescription(document.description)}
         </p>
 
-        {/* Metadata */}
-        <div className="space-y-1 text-xs text-muted-foreground">
-          <div className="flex items-center gap-1">
-            <Calendar className="w-3 h-3" />
-            <span>Uploaded {formatDistanceToNow(new Date(document.created_at), { addSuffix: true })}</span>
-          </div>
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-1">
-              <FileIcon className="w-3 h-3" />
-              <span>{formatFileSize(document.file_size)}</span>
-            </div>
-            {document.page_count > 0 && (
+        {/* Metadata Row */}
+        <div className="flex items-center text-xs text-muted-foreground/70 mb-4">
+          {document.page_count > 0 && (
+            <>
+              <FileText className="w-3.5 h-3.5 mr-1" />
               <span>{document.page_count} pages</span>
-            )}
-          </div>
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-1">
-              <Eye className="w-3 h-3" />
-              <span>{document.view_count} views</span>
-            </div>
-            <div className="flex items-center gap-1">
-              <Download className="w-3 h-3" />
-              <span>{document.download_count} downloads</span>
-            </div>
-          </div>
-          {document.uploader_name && (
-            <p className="text-xs">By {document.uploader_name}</p>
+              <span className="mx-2 marketplace-separator">•</span>
+            </>
           )}
+          <Calendar className="w-3.5 h-3.5 mr-1" />
+          <span>
+            {formatDistanceToNow(new Date(document.created_at), { addSuffix: true })}
+          </span>
         </div>
-      </CardContent>
 
-      <CardFooter className="p-4 pt-0 gap-2">
-        <Button 
-          variant="default" 
-          className="flex-1"
+        {/* Action Button */}
+        <button
           onClick={() => onView(document)}
+          className="w-full marketplace-btn-primary py-2.5 px-4 rounded-lg font-medium text-sm flex items-center justify-center gap-2"
         >
-          <Eye className="w-4 h-4 mr-2" />
-          View
-        </Button>
-        <Button 
-          variant="outline" 
-          size="icon"
-          onClick={() => onDownload(document)}
-        >
-          <Download className="w-4 h-4" />
-        </Button>
-      </CardFooter>
-    </Card>
+          <Eye className="w-4 h-4" />
+          View Document
+        </button>
+      </div>
+    </div>
   );
 }
