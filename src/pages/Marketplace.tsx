@@ -55,7 +55,7 @@ export default function Marketplace() {
   ];
 
   return (
-    <div className="min-h-full bg-[hsl(30,10%,98%)]">
+    <div className="h-full overflow-y-auto bg-[hsl(30,10%,98%)]">
       {/* Clean Header */}
       <header className="bg-card border-b border-border">
         <div className="max-w-7xl mx-auto px-6 md:px-12 py-10 md:py-12">
