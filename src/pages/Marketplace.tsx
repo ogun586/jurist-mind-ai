@@ -25,9 +25,6 @@ export default function Marketplace() {
     setViewingDocument(doc);
   };
 
-  const handleDownload = (doc: Document) => {
-    window.open(doc.file_url, '_blank');
-  };
 
   const handleBackFromViewer = () => {
     setViewingDocument(null);
@@ -40,7 +37,6 @@ export default function Marketplace() {
         <DocumentViewer
           document={viewingDocument}
           onBack={handleBackFromViewer}
-          onDownload={handleDownload}
           previewOnly={viewingDocument.page_count > 5}
         />
       </div>
