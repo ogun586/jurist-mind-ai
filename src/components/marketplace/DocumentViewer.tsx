@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { 
-  ZoomIn, ZoomOut, Download, ArrowLeft, Loader2, 
+  ZoomIn, ZoomOut, ArrowLeft, Loader2, 
   AlertCircle, ExternalLink, Maximize2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -10,11 +10,10 @@ import { Document as DocType } from "./types";
 interface DocumentViewerProps {
   document: DocType;
   onBack: () => void;
-  onDownload: (doc: DocType) => void;
   previewOnly?: boolean;
 }
 
-export function DocumentViewer({ document, onBack, onDownload, previewOnly = false }: DocumentViewerProps) {
+export function DocumentViewer({ document, onBack, previewOnly = false }: DocumentViewerProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [scale, setScale] = useState(100);
@@ -67,10 +66,6 @@ export function DocumentViewer({ document, onBack, onDownload, previewOnly = fal
             </Button>
           </div>
 
-          <Button variant="outline" size="sm" onClick={() => onDownload(document)}>
-            <Download className="w-4 h-4 mr-2" />
-            Download
-          </Button>
           
           <Button 
             variant="outline" 
@@ -97,10 +92,6 @@ export function DocumentViewer({ document, onBack, onDownload, previewOnly = fal
             <AlertCircle className="w-12 h-12 text-destructive mx-auto mb-4" />
             <p className="text-destructive mb-4">{error}</p>
             <div className="flex gap-2 justify-center">
-              <Button onClick={() => onDownload(document)}>
-                <Download className="w-4 h-4 mr-2" />
-                Download PDF
-              </Button>
               <Button 
                 variant="outline"
                 onClick={() => window.open(document.file_url, '_blank')}
@@ -138,9 +129,6 @@ export function DocumentViewer({ document, onBack, onDownload, previewOnly = fal
           </Button>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="ghost" size="icon" onClick={() => onDownload(document)}>
-            <Download className="w-4 h-4" />
-          </Button>
           <Button variant="ghost" size="icon" onClick={() => window.open(document.file_url, '_blank')}>
             <ExternalLink className="w-4 h-4" />
           </Button>
