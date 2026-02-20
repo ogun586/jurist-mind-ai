@@ -51,6 +51,7 @@ const App = () => (
                       <main className="flex-1 overflow-hidden">
                         <Routes>
                           <Route path="/" element={<Index />} />
+                          <Route path="/chat/:sessionId" element={<Index />} />
                           <Route path="/search" element={<Search />} />
                           <Route path="/cases" element={<Cases />} />
                           <Route path="/diary" element={<Diary />} />

@@ -5,7 +5,7 @@ import { MessageSquare, Plus, Trash2 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 
 interface ChatSession {
   id: string;
@@ -20,8 +20,8 @@ interface ChatHistoryProps {
 
 export function ChatHistory({ onNewChat, compact = false }: ChatHistoryProps) {
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
-  const currentSessionId = searchParams.get('session');
+  const location = useLocation();
+  const currentSessionId = location.pathname.startsWith('/chat/') ? location.pathname.split('/chat/')[1] : null;
   const [sessions, setSessions] = useState<ChatSession[]>([]);
   const [loading, setLoading] = useState(false);
   const { user } = useAuth();
@@ -59,8 +59,7 @@ export function ChatHistory({ onNewChat, compact = false }: ChatHistoryProps) {
   };
 
   const handleSelectSession = (sessionId: string) => {
-    // Use navigate for proper SPA routing
-    navigate(`/?session=${sessionId}`);
+    navigate(`/chat/${sessionId}`);
   };
 
   const deleteSession = async (sessionId: string) => {
