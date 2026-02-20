@@ -44,7 +44,7 @@ const App = () => (
             <Route path="/*" element={
               <ProtectedRoute>
                 <SidebarProvider>
-                  <div className="flex h-screen w-full">
+                  <div className="flex h-screen w-full bg-background">
                     <JuristSidebar />
                     <div className="flex-1 flex flex-col overflow-hidden">
                       <TopHeader />
