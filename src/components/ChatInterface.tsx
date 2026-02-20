@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { NavLink, useSearchParams, useNavigate } from "react-router-dom";
+import { NavLink, useParams, useNavigate } from "react-router-dom";
 import { SourceDisplay } from "@/components/SourceDisplay";
 
 interface Message {
@@ -29,7 +29,7 @@ export function ChatInterface() {
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const shouldAutoScrollRef = useRef(true);
   const inputRef = useRef<HTMLInputElement>(null);
-  const [searchParams] = useSearchParams();
+  const { sessionId: urlSessionId } = useParams<{ sessionId: string }>();
   const navigate = useNavigate();
 
   // Track scroll position and determine if auto-scroll should happen
@@ -72,19 +72,18 @@ export function ChatInterface() {
   useEffect(() => {
     if (!user) return;
     
-    const sessionId = searchParams.get('session');
-    
-    if (sessionId && sessionId !== currentSessionId) {
-      loadSession(sessionId);
-    } else if (!sessionId && currentSessionId) {
+    if (urlSessionId && urlSessionId !== currentSessionId) {
+      setMessages([]); // Clear stale messages immediately
+      loadSession(urlSessionId);
+    } else if (!urlSessionId && currentSessionId) {
       // URL cleared, start fresh
       setMessages([]);
       setCurrentSessionId(null);
-    } else if (!sessionId && !currentSessionId) {
+    } else if (!urlSessionId && !currentSessionId) {
       // Initial load without session param - load most recent
       loadMostRecentSession();
     }
-  }, [user, searchParams]);
+  }, [user, urlSessionId]);
 
   // Listen for new chat event from sidebar
   useEffect(() => {
@@ -153,8 +152,7 @@ export function ChatInterface() {
       if (error) throw error;
       
       if (data) {
-        // Update URL without reload
-        navigate(`/?session=${data.id}`, { replace: true });
+        navigate(`/chat/${data.id}`, { replace: true });
       }
     } catch (error) {
       console.error('Error loading recent session:', error);
@@ -300,8 +298,7 @@ export function ChatInterface() {
         return;
       }
       setCurrentSessionId(sessionId);
-      // Update URL with new session
-      navigate(`/?session=${sessionId}`, { replace: true });
+      navigate(`/chat/${sessionId}`, { replace: true });
     }
 
     const userMessageContent = inputValue;
