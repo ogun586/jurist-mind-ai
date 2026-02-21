@@ -530,39 +530,51 @@ export type Database = {
       jobs: {
         Row: {
           applications_count: number | null
+          benefits: string | null
           company: string
           created_at: string | null
+          deadline: string | null
           description: string
+          experience_level: string | null
           id: string
           job_type: string
           location: string
           posted_by: string
+          requirements: string | null
           salary_range: string | null
           title: string
           updated_at: string | null
         }
         Insert: {
           applications_count?: number | null
+          benefits?: string | null
           company: string
           created_at?: string | null
+          deadline?: string | null
           description: string
+          experience_level?: string | null
           id?: string
           job_type: string
           location: string
           posted_by: string
+          requirements?: string | null
           salary_range?: string | null
           title: string
           updated_at?: string | null
         }
         Update: {
           applications_count?: number | null
+          benefits?: string | null
           company?: string
           created_at?: string | null
+          deadline?: string | null
           description?: string
+          experience_level?: string | null
           id?: string
           job_type?: string
           location?: string
           posted_by?: string
+          requirements?: string | null
           salary_range?: string | null
           title?: string
           updated_at?: string | null
