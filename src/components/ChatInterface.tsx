@@ -46,10 +46,8 @@ export function ChatInterface() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  // KEY FIX: React to URL path param changes (e.g. /chat/:sessionId)
   useEffect(() => {
     if (!user) return;
-
     if (urlSessionId) {
       setMessages([]);
       loadSession(urlSessionId);
@@ -72,39 +70,25 @@ export function ChatInterface() {
 
   useEffect(() => {
     if (!currentSessionId) return;
-
     const channel = supabase
       .channel(`chat_updates:${currentSessionId}`)
-      .on(
-        "postgres_changes",
-        {
-          event: "INSERT",
-          schema: "public",
-          table: "chat_messages",
-          filter: `session_id=eq.${currentSessionId}`,
-        },
-        (payload) => {
-          const newMsg = payload.new as any;
-          setMessages((prev) => {
-            if (prev.some((msg) => msg.db_id === newMsg.id)) return prev;
-            return [
-              ...prev,
-              {
-                id: newMsg.id,
-                db_id: newMsg.id,
-                content: newMsg.content,
-                sender: newMsg.sender as "user" | "ai",
-                timestamp: new Date(newMsg.created_at),
-              },
-            ];
-          });
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
+      .on("postgres_changes", {
+        event: "INSERT",
+        schema: "public",
+        table: "chat_messages",
+        filter: `session_id=eq.${currentSessionId}`,
+      }, (payload) => {
+        const newMsg = payload.new as any;
+        setMessages((prev) => {
+          if (prev.some((msg) => msg.db_id === newMsg.id)) return prev;
+          return [...prev, {
+            id: newMsg.id, db_id: newMsg.id, content: newMsg.content,
+            sender: newMsg.sender as "user" | "ai",
+            timestamp: new Date(newMsg.created_at),
+          }];
+        });
+      }).subscribe();
+    return () => { supabase.removeChannel(channel); };
   }, [currentSessionId]);
 
   const handleCopy = (content: string, id: string) => {
@@ -121,13 +105,11 @@ export function ChatInterface() {
     }
     try {
       const { error } = await supabase.from("chat_feedback").insert({
-        message_id: message.db_id,
-        user_id: user.id,
-        is_positive: isPositive,
+        message_id: message.db_id, user_id: user.id, is_positive: isPositive,
       });
       if (error) throw error;
       toast({ title: isPositive ? "Thanks!" : "Feedback Sent", description: "We use this to improve Jurist Mind." });
-    } catch (error) {
+    } catch {
       toast({ description: "Failed to submit feedback", variant: "destructive" });
     }
   };
@@ -135,9 +117,7 @@ export function ChatInterface() {
   const handleRegenerate = async () => {
     const lastUserMessage = [...messages].reverse().find((m) => m.sender === "user");
     if (lastUserMessage && !isLoading) {
-      if (messages[messages.length - 1].sender === "ai") {
-        setMessages((prev) => prev.slice(0, -1));
-      }
+      if (messages[messages.length - 1].sender === "ai") setMessages((prev) => prev.slice(0, -1));
       await processMessage(lastUserMessage.content, true);
     }
   };
@@ -154,58 +134,36 @@ export function ChatInterface() {
     if (!user) return;
     try {
       const { data, error } = await supabase
-        .from("chat_sessions")
-        .select("id")
-        .eq("user_id", user.id)
-        .order("updated_at", { ascending: false })
-        .limit(1)
-        .maybeSingle();
+        .from("chat_sessions").select("id").eq("user_id", user.id)
+        .order("updated_at", { ascending: false }).limit(1).maybeSingle();
       if (error) throw error;
       if (data) navigate(`/chat/${data.id}`, { replace: true });
-    } catch (error) {
-      console.error("Error loading recent session:", error);
-    }
+    } catch (error) { console.error("Error loading recent session:", error); }
   };
 
   const createNewSession = async () => {
     if (!user) return null;
     try {
-      const { data, error } = await supabase
-        .from("chat_sessions")
-        .insert({ user_id: user.id, title: "New Chat" })
-        .select()
-        .single();
+      const { data, error } = await supabase.from("chat_sessions")
+        .insert({ user_id: user.id, title: "New Chat" }).select().single();
       if (error) throw error;
       return data.id;
-    } catch (error) {
-      console.error("Error creating session:", error);
-      return null;
-    }
+    } catch { return null; }
   };
 
   const saveMessage = async (sessionId: string, content: string, sender: "user" | "ai"): Promise<string | null> => {
     try {
-      const { data, error } = await supabase
-        .from("chat_messages")
-        .insert({ session_id: sessionId, content, sender })
-        .select("id, created_at")
-        .single();
+      const { data, error } = await supabase.from("chat_messages")
+        .insert({ session_id: sessionId, content, sender }).select("id, created_at").single();
       if (error) throw error;
       await supabase.from("chat_sessions").update({ updated_at: new Date().toISOString() }).eq("id", sessionId);
       return data?.id || null;
-    } catch (error) {
-      console.error("Error saving message:", error);
-      return null;
-    }
+    } catch { return null; }
   };
 
   const updateSessionTitle = async (sessionId: string, firstMessage: string) => {
     const title = firstMessage.length > 50 ? firstMessage.substring(0, 50) + "..." : firstMessage;
-    try {
-      await supabase.from("chat_sessions").update({ title }).eq("id", sessionId);
-    } catch (error) {
-      console.error(error);
-    }
+    try { await supabase.from("chat_sessions").update({ title }).eq("id", sessionId); } catch { }
   };
 
   const processMessage = async (messageContent: string, isRegeneration: boolean = false) => {
@@ -217,31 +175,20 @@ export function ChatInterface() {
     try {
       const { data: usageCheck, error: usageError } = await supabase.functions.invoke("check-ai-usage");
       if (usageError || !usageCheck?.allowed) {
-        const reason = usageCheck?.reason || "Usage limit reached";
         toast({
           title: "Limit Reached",
-          description: `${reason} — Upgrade to continue.`,
+          description: `${usageCheck?.reason || "Usage limit reached"} — Upgrade to continue.`,
           variant: "destructive",
-          action: (
-            <Button variant="outline" size="sm" onClick={() => navigate("/upgrade")}>
-              Upgrade
-            </Button>
-          ),
+          action: <Button variant="outline" size="sm" onClick={() => navigate("/upgrade")}>Upgrade</Button>,
         });
         return;
       }
-    } catch (error) {
-      console.error("Error checking usage:", error);
-      return;
-    }
+    } catch { return; }
 
     let sessionId = currentSessionId;
     if (!sessionId) {
       sessionId = await createNewSession();
-      if (!sessionId) {
-        toast({ title: "Error", description: "Failed to create chat session", variant: "destructive" });
-        return;
-      }
+      if (!sessionId) { toast({ title: "Error", description: "Failed to create chat session", variant: "destructive" }); return; }
       setCurrentSessionId(sessionId);
       navigate(`/chat/${sessionId}`, { replace: true });
     }
@@ -249,13 +196,9 @@ export function ChatInterface() {
     if (!isRegeneration) {
       setInputValue("");
       const tempMessageId = Date.now().toString();
-      const newMessage: Message = { id: tempMessageId, content: messageContent, sender: "user", timestamp: new Date() };
-      setMessages((prev) => [...prev, newMessage]);
-
+      setMessages((prev) => [...prev, { id: tempMessageId, content: messageContent, sender: "user", timestamp: new Date() }]);
       const userDbId = await saveMessage(sessionId, messageContent, "user");
-      if (userDbId) {
-        setMessages((prev) => prev.map((msg) => (msg.id === tempMessageId ? { ...msg, db_id: userDbId } : msg)));
-      }
+      if (userDbId) setMessages((prev) => prev.map((msg) => msg.id === tempMessageId ? { ...msg, db_id: userDbId } : msg));
       if (messages.length === 0) await updateSessionTitle(sessionId, messageContent);
     }
 
@@ -271,7 +214,7 @@ export function ChatInterface() {
 
       const response = await fetch("https://juristmind.onrender.com/ask", { method: "POST", body: formData });
       if (!response.ok) throw new Error("Failed to get AI response");
-      if (!response.body) throw new Error("No response body from server");
+      if (!response.body) throw new Error("No response body");
 
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
@@ -291,25 +234,21 @@ export function ChatInterface() {
               const data = JSON.parse(dataStr);
               if (data.content) {
                 fullContent += data.content;
-                setMessages((prev) => prev.map((msg) => (msg.id === aiTempId ? { ...msg, content: fullContent } : msg)));
+                setMessages((prev) => prev.map((msg) => msg.id === aiTempId ? { ...msg, content: fullContent } : msg));
               }
-            } catch {}
+            } catch { }
           }
         }
       }
 
       if (fullContent) {
         const aiDbId = await saveMessage(sessionId, fullContent, "ai");
-        if (aiDbId) {
-          setMessages((prev) => prev.map((msg) => (msg.id === aiTempId ? { ...msg, db_id: aiDbId } : msg)));
-        }
+        if (aiDbId) setMessages((prev) => prev.map((msg) => msg.id === aiTempId ? { ...msg, db_id: aiDbId } : msg));
       }
-
-      try { await supabase.functions.invoke("increment-ai-usage", { body: { points: 1 } }); } catch {}
-    } catch (error) {
-      console.error("Error calling AI:", error);
+      try { await supabase.functions.invoke("increment-ai-usage", { body: { points: 1 } }); } catch { }
+    } catch {
       const errorContent = "I'm having trouble connecting right now. Please try again later.";
-      setMessages((prev) => prev.map((msg) => (msg.id === aiTempId ? { ...msg, content: errorContent } : msg)));
+      setMessages((prev) => prev.map((msg) => msg.id === aiTempId ? { ...msg, content: errorContent } : msg));
       await saveMessage(sessionId, errorContent, "ai");
     } finally {
       setIsLoading(false);
@@ -324,34 +263,19 @@ export function ChatInterface() {
   const loadSession = async (sessionId: string) => {
     try {
       setIsLoading(true);
-      const { data, error } = await supabase
-        .from("chat_messages")
-        .select("id, content, sender, created_at")
-        .eq("session_id", sessionId)
+      const { data, error } = await supabase.from("chat_messages")
+        .select("id, content, sender, created_at").eq("session_id", sessionId)
         .order("created_at", { ascending: true });
-
       if (error) throw error;
-
-      if (!data || data.length === 0) {
-        setMessages([]);
-        setCurrentSessionId(sessionId);
-        return;
-      }
-
-      const loadedMessages: Message[] = data.map((msg) => ({
-        id: msg.id,
-        db_id: msg.id,
-        content: msg.content,
+      if (!data || data.length === 0) { setMessages([]); setCurrentSessionId(sessionId); return; }
+      setMessages(data.map((msg) => ({
+        id: msg.id, db_id: msg.id, content: msg.content,
         sender: msg.sender as "user" | "ai",
-        timestamp: new Date(msg.created_at),
-        sources: [],
-      }));
-
-      setMessages(loadedMessages);
+        timestamp: new Date(msg.created_at), sources: [],
+      })));
       setCurrentSessionId(sessionId);
       setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: "auto" }), 100);
-    } catch (error) {
-      console.error("Error loading session:", error);
+    } catch {
       toast({ title: "Error", description: "Failed to load chat session", variant: "destructive" });
     } finally {
       setIsLoading(false);
@@ -359,11 +283,9 @@ export function ChatInterface() {
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter") {
-      if (!e.shiftKey && !isMobile) {
-        e.preventDefault();
-        handleSendMessage();
-      }
+    if (e.key === "Enter" && !e.shiftKey && !isMobile) {
+      e.preventDefault();
+      handleSendMessage();
     }
   };
 
@@ -436,40 +358,80 @@ export function ChatInterface() {
                     </div>
                   )}
 
-                  <div className={`max-w-[75%] ${message.sender === "user" ? "msg-user" : "msg-ai"}`}>
+                  <div className={`max-w-[75%] ${message.sender === "user" ? "msg-user px-4 py-3" : "msg-ai px-5 py-4"}`}>
                     {message.content ? (
-                      <div className="prose prose-sm max-w-none dark:prose-invert prose-p:my-1 prose-headings:my-2">
+                      <div className="prose prose-sm max-w-none dark:prose-invert">
                         <ReactMarkdown
                           remarkPlugins={[remarkGfm]}
                           components={{
-                            p: ({ node, ...props }) => <p className="text-sm leading-relaxed my-1" {...props} />,
-                            strong: ({ node, ...props }) => <strong className="font-semibold" {...props} />,
-                            ul: ({ node, ...props }) => <ul className="list-disc pl-4 my-2 space-y-1 text-sm" {...props} />,
-                            ol: ({ node, ...props }) => <ol className="list-decimal pl-4 my-2 space-y-1 text-sm" {...props} />,
-                            li: ({ node, ...props }) => <li className="text-sm leading-relaxed" {...props} />,
-                            h1: ({ node, ...props }) => <h1 className="text-lg font-bold my-2" {...props} />,
-                            h2: ({ node, ...props }) => <h2 className="text-base font-bold my-2" {...props} />,
-                            h3: ({ node, ...props }) => <h3 className="text-sm font-semibold my-1" {...props} />,
-                            code: ({ node, className, ...props }) => (
-                              <code className="bg-black/20 rounded px-1 py-0.5 text-xs font-mono" {...props} />
+                            p: ({ node, ...props }) => (
+                              <p className="text-sm leading-[1.8] my-2 text-foreground/90" {...props} />
                             ),
+                            strong: ({ node, ...props }) => (
+                              <strong className="font-semibold text-foreground" {...props} />
+                            ),
+                            em: ({ node, ...props }) => (
+                              <em className="italic text-foreground/80" {...props} />
+                            ),
+                            ul: ({ node, ...props }) => (
+                              <ul className="list-disc pl-5 my-3 space-y-1.5 text-sm" {...props} />
+                            ),
+                            ol: ({ node, ...props }) => (
+                              <ol className="list-decimal pl-5 my-3 space-y-1.5 text-sm" {...props} />
+                            ),
+                            li: ({ node, ...props }) => (
+                              <li className="text-sm leading-[1.7] text-foreground/90 pl-1" {...props} />
+                            ),
+                            h1: ({ node, ...props }) => (
+                              <h1 className="text-xl font-bold mt-5 mb-3 text-foreground border-b border-[rgba(255,255,255,0.08)] pb-2" {...props} />
+                            ),
+                            h2: ({ node, ...props }) => (
+                              <h2 className="text-base font-bold mt-4 mb-2 text-foreground" {...props} />
+                            ),
+                            h3: ({ node, ...props }) => (
+                              <h3 className="text-sm font-semibold mt-3 mb-1.5 text-primary/90" {...props} />
+                            ),
+                            blockquote: ({ node, ...props }) => (
+                              <blockquote className="border-l-2 border-primary/40 pl-4 my-3 italic text-muted-foreground text-sm" {...props} />
+                            ),
+                            code: ({ node, className, children, ...props }: any) => {
+                              const isInline = !className;
+                              return isInline ? (
+                                <code className="bg-primary/10 text-primary rounded px-1.5 py-0.5 text-xs font-mono border border-primary/20" {...props}>
+                                  {children}
+                                </code>
+                              ) : (
+                                <code className="text-xs font-mono" {...props}>{children}</code>
+                              );
+                            },
                             pre: ({ node, ...props }) => (
-                              <div className="relative my-2">
-                                <pre className="bg-black/30 rounded-lg p-3 overflow-x-auto text-xs font-mono" {...props} />
+                              <div className="relative my-3">
+                                <pre className="bg-[rgba(0,0,0,0.4)] border border-[rgba(255,255,255,0.08)] rounded-xl p-4 overflow-x-auto text-xs font-mono leading-relaxed" {...props} />
                               </div>
                             ),
                             table: ({ node, ...props }) => (
-                              <div className="overflow-x-auto my-3">
-                                <table className="w-full text-xs border-collapse" {...props} />
+                              <div className="overflow-x-auto my-4 rounded-xl border border-[rgba(255,255,255,0.08)]">
+                                <table className="w-full text-sm border-collapse" {...props} />
                               </div>
                             ),
-                            thead: ({ node, ...props }) => <thead className="bg-primary/10" {...props} />,
-                            tbody: ({ node, ...props }) => <tbody {...props} />,
-                            tr: ({ node, ...props }) => <tr className="border-b border-[rgba(255,255,255,0.06)]" {...props} />,
-                            th: ({ node, ...props }) => (
-                              <th className="text-left px-3 py-2 font-semibold text-primary text-xs" {...props} />
+                            thead: ({ node, ...props }) => (
+                              <thead className="bg-primary/10" {...props} />
                             ),
-                            td: ({ node, ...props }) => <td className="px-3 py-2 text-xs" {...props} />,
+                            tbody: ({ node, ...props }) => (
+                              <tbody className="divide-y divide-[rgba(255,255,255,0.05)]" {...props} />
+                            ),
+                            tr: ({ node, ...props }) => (
+                              <tr className="hover:bg-[rgba(255,255,255,0.02)] transition-colors" {...props} />
+                            ),
+                            th: ({ node, ...props }) => (
+                              <th className="text-left px-4 py-3 font-semibold text-primary text-xs uppercase tracking-wider" {...props} />
+                            ),
+                            td: ({ node, ...props }) => (
+                              <td className="px-4 py-3 text-sm text-foreground/85" {...props} />
+                            ),
+                            hr: ({ node, ...props }) => (
+                              <hr className="my-4 border-[rgba(255,255,255,0.08)]" {...props} />
+                            ),
                           }}
                         >
                           {message.content}
@@ -484,10 +446,10 @@ export function ChatInterface() {
                     )}
 
                     {message.sender === "ai" && message.content && (
-                      <div className="flex items-center gap-1 mt-2 pt-2 border-t border-[rgba(255,255,255,0.06)]">
+                      <div className="flex items-center gap-1 mt-3 pt-2 border-t border-[rgba(255,255,255,0.06)]">
                         <button
                           onClick={() => handleCopy(message.content, message.id)}
-                          className="p-1 rounded hover:bg-primary/10 text-muted-foreground hover:text-primary transition-colors"
+                          className="p-1.5 rounded-lg hover:bg-primary/10 text-muted-foreground hover:text-primary transition-colors"
                           title="Copy"
                         >
                           {copiedId === message.id ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
@@ -495,7 +457,7 @@ export function ChatInterface() {
                         {index === messages.length - 1 && !isLoading && (
                           <button
                             onClick={handleRegenerate}
-                            className="p-1 rounded hover:bg-primary/10 text-muted-foreground hover:text-primary transition-colors"
+                            className="p-1.5 rounded-lg hover:bg-primary/10 text-muted-foreground hover:text-primary transition-colors"
                             title="Regenerate"
                           >
                             <RotateCcw className="w-3.5 h-3.5" />
@@ -503,24 +465,24 @@ export function ChatInterface() {
                         )}
                         <button
                           onClick={() => handleFeedback(message, true)}
-                          className="p-1 rounded hover:bg-primary/10 text-muted-foreground hover:text-green-500 transition-colors"
+                          className="p-1.5 rounded-lg hover:bg-primary/10 text-muted-foreground hover:text-green-500 transition-colors"
                         >
                           <ThumbsUp className="w-3.5 h-3.5" />
                         </button>
                         <button
                           onClick={() => handleFeedback(message, false)}
-                          className="p-1 rounded hover:bg-primary/10 text-muted-foreground hover:text-destructive transition-colors"
+                          className="p-1.5 rounded-lg hover:bg-primary/10 text-muted-foreground hover:text-destructive transition-colors"
                         >
                           <ThumbsDown className="w-3.5 h-3.5" />
                         </button>
-                        <span className="text-[10px] text-muted-foreground ml-auto">
+                        <span className="text-[10px] text-muted-foreground/50 ml-auto">
                           {message.timestamp.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
                         </span>
                       </div>
                     )}
 
                     {message.sender === "user" && (
-                      <p className="text-[10px] text-muted-foreground mt-1 text-right">
+                      <p className="text-[10px] text-muted-foreground/50 mt-1.5 text-right">
                         {message.timestamp.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
                       </p>
                     )}
@@ -542,7 +504,11 @@ export function ChatInterface() {
         <div className="max-w-3xl mx-auto">
           <div className="chat-input-glass rounded-2xl px-4 py-3">
             <div className="flex gap-3 items-end">
-              <Button size="sm" variant="ghost" className="p-2 h-9 w-9 rounded-full text-muted-foreground hover:text-primary hover:bg-primary/10 flex-shrink-0 mb-0.5">
+              <Button
+                size="sm"
+                variant="ghost"
+                className="p-2 h-9 w-9 rounded-full text-muted-foreground hover:text-primary hover:bg-primary/10 flex-shrink-0 mb-0.5"
+              >
                 <Paperclip className="w-4 h-4" />
               </Button>
               <TextareaAutosize
@@ -556,13 +522,18 @@ export function ChatInterface() {
                 className="flex-1 bg-transparent border-none resize-none focus:outline-none focus:ring-0 text-sm text-foreground placeholder:text-muted-foreground/60 placeholder:italic py-2"
               />
               <div className="flex gap-1.5 flex-shrink-0 mb-0.5">
-                <Button size="sm" variant="ghost" className="p-2 h-8 w-8 rounded-full text-muted-foreground hover:text-primary hover:bg-primary/10">
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="p-2 h-8 w-8 rounded-full text-muted-foreground hover:text-primary hover:bg-primary/10"
+                >
                   <Mic className="w-4 h-4" />
                 </Button>
                 <button
                   onClick={handleSendMessage}
                   disabled={!inputValue.trim() || isLoading || !user}
                   className="h-8 w-8 rounded-full bg-gradient-primary flex items-center justify-center shadow-gold hover:shadow-gold-lg btn-lift btn-press disabled:opacity-30 disabled:bg-muted disabled:shadow-none disabled:bg-none transition-all"
+                  style={{ background: (!inputValue.trim() || isLoading || !user) ? undefined : "var(--gradient-primary)" }}
                 >
                   <Send className="w-3.5 h-3.5 text-gold-foreground" />
                 </button>
@@ -570,7 +541,7 @@ export function ChatInterface() {
             </div>
           </div>
           <div className="text-center mt-3">
-            <p className="text-[10px] text-muted-foreground/60">
+            <p className="text-[10px] text-muted-foreground/50">
               By using Jurist Mind, you consent to the{" "}
               <NavLink to="/terms" className="text-primary/70 hover:text-primary hover:underline transition-colors">
                 terms and conditions
