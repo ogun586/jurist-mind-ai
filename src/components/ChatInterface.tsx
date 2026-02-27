@@ -1,12 +1,14 @@
-import { useState, useEffect, useRef, useCallback } from "react";
-import { Send, Mic, Paperclip, Plus, ArrowDown, Scale } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
+import { Send, Mic, Paperclip, Copy, Check, RotateCcw, ThumbsUp, ThumbsDown, Plus, Scale } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { NavLink, useParams, useNavigate } from "react-router-dom";
 import { SourceDisplay } from "@/components/SourceDisplay";
+import ReactMarkdown from "react-markdown";
+import TextareaAutosize from "react-textarea-autosize";
+import remarkGfm from "remark-gfm";
 
 interface Message {
   id: string;
@@ -29,56 +31,29 @@ export function ChatInterface() {
   const [inputValue, setInputValue] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
-  const [showJumpToLatest, setShowJumpToLatest] = useState(false);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+
   const { user } = useAuth();
   const { toast } = useToast();
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const messagesContainerRef = useRef<HTMLDivElement>(null);
-  const shouldAutoScrollRef = useRef(true);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
   const { sessionId: urlSessionId } = useParams<{ sessionId: string }>();
   const navigate = useNavigate();
 
-  // Track scroll position and determine if auto-scroll should happen
-  const handleScroll = useCallback(() => {
-    const container = messagesContainerRef.current;
-    if (!container) return;
-
-    const { scrollTop, scrollHeight, clientHeight } = container;
-    const distanceFromBottom = scrollHeight - scrollTop - clientHeight;
-    const threshold = 150;
-
-    if (distanceFromBottom <= threshold) {
-      shouldAutoScrollRef.current = true;
-      setShowJumpToLatest(false);
-    } else {
-      shouldAutoScrollRef.current = false;
-      if (messages.length > 0) {
-        setShowJumpToLatest(true);
-      }
-    }
-  }, [messages.length]);
+  const isMobile = typeof window !== "undefined" && window.innerWidth < 768;
 
   useEffect(() => {
-    if (shouldAutoScrollRef.current) {
-      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-    }
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  const handleJumpToLatest = () => {
-    shouldAutoScrollRef.current = true;
-    setShowJumpToLatest(false);
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  };
-
+  // KEY FIX: React to URL path param changes (e.g. /chat/:sessionId)
   useEffect(() => {
     if (!user) return;
-    
+
     if (urlSessionId) {
-      // Always clear + reload whenever the URL session changes
       setMessages([]);
       loadSession(urlSessionId);
-    } else if (!urlSessionId) {
+    } else {
       setMessages([]);
       setCurrentSessionId(null);
       loadMostRecentSession();
@@ -89,13 +64,10 @@ export function ChatInterface() {
     const handleNewChatEvent = () => {
       setMessages([]);
       setCurrentSessionId(null);
-      shouldAutoScrollRef.current = true;
-      setShowJumpToLatest(false);
       setTimeout(() => inputRef.current?.focus(), 100);
     };
-    
-    window.addEventListener('newChat', handleNewChatEvent);
-    return () => window.removeEventListener('newChat', handleNewChatEvent);
+    window.addEventListener("newChat", handleNewChatEvent);
+    return () => window.removeEventListener("newChat", handleNewChatEvent);
   }, []);
 
   useEffect(() => {
@@ -104,46 +76,94 @@ export function ChatInterface() {
     const channel = supabase
       .channel(`chat_updates:${currentSessionId}`)
       .on(
-        'postgres_changes',
+        "postgres_changes",
         {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'chat_messages',
-          filter: `session_id=eq.${currentSessionId}`
+          event: "INSERT",
+          schema: "public",
+          table: "chat_messages",
+          filter: `session_id=eq.${currentSessionId}`,
         },
         (payload) => {
           const newMsg = payload.new as any;
-          setMessages(prev => {
-            if (prev.some(msg => msg.db_id === newMsg.id)) return prev;
-            return [...prev, {
-              id: newMsg.id,
-              db_id: newMsg.id,
-              content: newMsg.content,
-              sender: newMsg.sender as 'user' | 'ai',
-              timestamp: new Date(newMsg.created_at),
-            }];
+          setMessages((prev) => {
+            if (prev.some((msg) => msg.db_id === newMsg.id)) return prev;
+            return [
+              ...prev,
+              {
+                id: newMsg.id,
+                db_id: newMsg.id,
+                content: newMsg.content,
+                sender: newMsg.sender as "user" | "ai",
+                timestamp: new Date(newMsg.created_at),
+              },
+            ];
           });
         }
       )
       .subscribe();
 
-    return () => { supabase.removeChannel(channel); };
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [currentSessionId]);
+
+  const handleCopy = (content: string, id: string) => {
+    navigator.clipboard.writeText(content);
+    setCopiedId(id);
+    toast({ description: "Copied to clipboard" });
+    setTimeout(() => setCopiedId(null), 2000);
+  };
+
+  const handleFeedback = async (message: Message, isPositive: boolean) => {
+    if (!message.db_id || !user) {
+      toast({ description: "Cannot rate this message yet.", variant: "destructive" });
+      return;
+    }
+    try {
+      const { error } = await supabase.from("chat_feedback").insert({
+        message_id: message.db_id,
+        user_id: user.id,
+        is_positive: isPositive,
+      });
+      if (error) throw error;
+      toast({ title: isPositive ? "Thanks!" : "Feedback Sent", description: "We use this to improve Jurist Mind." });
+    } catch (error) {
+      toast({ description: "Failed to submit feedback", variant: "destructive" });
+    }
+  };
+
+  const handleRegenerate = async () => {
+    const lastUserMessage = [...messages].reverse().find((m) => m.sender === "user");
+    if (lastUserMessage && !isLoading) {
+      if (messages[messages.length - 1].sender === "ai") {
+        setMessages((prev) => prev.slice(0, -1));
+      }
+      await processMessage(lastUserMessage.content, true);
+    }
+  };
+
+  const handleNewChat = () => {
+    setMessages([]);
+    setCurrentSessionId(null);
+    navigate("/", { replace: true });
+    window.dispatchEvent(new CustomEvent("newChat"));
+    setTimeout(() => inputRef.current?.focus(), 100);
+  };
 
   const loadMostRecentSession = async () => {
     if (!user) return;
     try {
       const { data, error } = await supabase
-        .from('chat_sessions')
-        .select('id')
-        .eq('user_id', user.id)
-        .order('updated_at', { ascending: false })
+        .from("chat_sessions")
+        .select("id")
+        .eq("user_id", user.id)
+        .order("updated_at", { ascending: false })
         .limit(1)
         .maybeSingle();
       if (error) throw error;
       if (data) navigate(`/chat/${data.id}`, { replace: true });
     } catch (error) {
-      console.error('Error loading recent session:', error);
+      console.error("Error loading recent session:", error);
     }
   };
 
@@ -151,83 +171,67 @@ export function ChatInterface() {
     if (!user) return null;
     try {
       const { data, error } = await supabase
-        .from('chat_sessions')
-        .insert({ user_id: user.id, title: 'New Chat' })
+        .from("chat_sessions")
+        .insert({ user_id: user.id, title: "New Chat" })
         .select()
         .single();
       if (error) throw error;
       return data.id;
     } catch (error) {
-      console.error('Error creating session:', error);
+      console.error("Error creating session:", error);
       return null;
     }
   };
 
-  const saveMessage = async (sessionId: string, content: string, sender: 'user' | 'ai'): Promise<string | null> => {
+  const saveMessage = async (sessionId: string, content: string, sender: "user" | "ai"): Promise<string | null> => {
     try {
       const { data, error } = await supabase
-        .from('chat_messages')
+        .from("chat_messages")
         .insert({ session_id: sessionId, content, sender })
-        .select('id, created_at')
+        .select("id, created_at")
         .single();
       if (error) throw error;
-      await supabase.from('chat_sessions').update({ updated_at: new Date().toISOString() }).eq('id', sessionId);
+      await supabase.from("chat_sessions").update({ updated_at: new Date().toISOString() }).eq("id", sessionId);
       return data?.id || null;
     } catch (error) {
-      console.error('Error saving message:', error);
-      toast({ title: "Warning", description: "Message may not have been saved", variant: "destructive" });
+      console.error("Error saving message:", error);
       return null;
     }
   };
 
   const updateSessionTitle = async (sessionId: string, firstMessage: string) => {
-    const title = firstMessage.length > 50 ? firstMessage.substring(0, 50) + '...' : firstMessage;
+    const title = firstMessage.length > 50 ? firstMessage.substring(0, 50) + "..." : firstMessage;
     try {
-      await supabase.from('chat_sessions').update({ title }).eq('id', sessionId);
+      await supabase.from("chat_sessions").update({ title }).eq("id", sessionId);
     } catch (error) {
-      console.error('Error updating session title:', error);
+      console.error(error);
     }
   };
 
-  const handleNewChat = () => {
-    setMessages([]);
-    setCurrentSessionId(null);
-    shouldAutoScrollRef.current = true;
-    setShowJumpToLatest(false);
-    navigate('/', { replace: true });
-    window.dispatchEvent(new CustomEvent('newChat'));
-    setTimeout(() => inputRef.current?.focus(), 100);
-  };
-
-  const handleSendMessage = async () => {
-    if (!inputValue.trim()) return;
+  const processMessage = async (messageContent: string, isRegeneration: boolean = false) => {
     if (!user) {
-      toast({ title: "Authentication Required", description: "Please sign in to chat with JURIST MIND", variant: "destructive" });
+      toast({ title: "Authentication Required", description: "Please sign in.", variant: "destructive" });
       return;
     }
 
     try {
-      const { data: usageCheck, error: usageError } = await supabase.functions.invoke('check-ai-usage');
+      const { data: usageCheck, error: usageError } = await supabase.functions.invoke("check-ai-usage");
       if (usageError || !usageCheck?.allowed) {
-        const reason = usageCheck?.reason || 'Usage limit reached';
+        const reason = usageCheck?.reason || "Usage limit reached";
         toast({
-          title: "Usage Limit Reached",
-          description: `${reason} - Upgrade your plan to continue!`,
+          title: "Limit Reached",
+          description: `${reason} — Upgrade to continue.`,
           variant: "destructive",
           action: (
-            <Button variant="outline" size="sm" onClick={() => navigate('/upgrade')}>
-              Upgrade Now
+            <Button variant="outline" size="sm" onClick={() => navigate("/upgrade")}>
+              Upgrade
             </Button>
           ),
         });
         return;
       }
-      if (usageCheck.requests_remaining > 0 && usageCheck.requests_remaining < 10) {
-        toast({ title: "Usage Notice", description: `You have ${usageCheck.requests_remaining} requests remaining today` });
-      }
     } catch (error) {
-      console.error('Error checking usage:', error);
-      toast({ title: "Error", description: "Failed to check usage limits. Please try again.", variant: "destructive" });
+      console.error("Error checking usage:", error);
       return;
     }
 
@@ -242,35 +246,32 @@ export function ChatInterface() {
       navigate(`/chat/${sessionId}`, { replace: true });
     }
 
-    const userMessageContent = inputValue;
-    const tempMessageId = Date.now().toString();
-    shouldAutoScrollRef.current = true;
-    setShowJumpToLatest(false);
+    if (!isRegeneration) {
+      setInputValue("");
+      const tempMessageId = Date.now().toString();
+      const newMessage: Message = { id: tempMessageId, content: messageContent, sender: "user", timestamp: new Date() };
+      setMessages((prev) => [...prev, newMessage]);
 
-    const newMessage: Message = { id: tempMessageId, content: userMessageContent, sender: "user", timestamp: new Date() };
-    setMessages(prev => [...prev, newMessage]);
-    setInputValue("");
-    setIsLoading(true);
-
-    const userDbId = await saveMessage(sessionId, userMessageContent, 'user');
-    if (userDbId) {
-      setMessages(prev => prev.map(msg => msg.id === tempMessageId ? { ...msg, db_id: userDbId } : msg));
+      const userDbId = await saveMessage(sessionId, messageContent, "user");
+      if (userDbId) {
+        setMessages((prev) => prev.map((msg) => (msg.id === tempMessageId ? { ...msg, db_id: userDbId } : msg)));
+      }
+      if (messages.length === 0) await updateSessionTitle(sessionId, messageContent);
     }
-    if (messages.length === 0) await updateSessionTitle(sessionId, userMessageContent);
 
+    setIsLoading(true);
     const aiTempId = (Date.now() + 1).toString();
-    const aiPlaceholder: Message = { id: aiTempId, content: "", sender: "ai", timestamp: new Date() };
-    setMessages(prev => [...prev, aiPlaceholder]);
+    setMessages((prev) => [...prev, { id: aiTempId, content: "", sender: "ai", timestamp: new Date() }]);
 
     try {
       const formData = new FormData();
-      formData.append('question', userMessageContent);
-      if (sessionId) formData.append('chat_id', sessionId);
-      if (user?.id) formData.append('user_id', user.id);
+      formData.append("question", messageContent);
+      if (sessionId) formData.append("chat_id", sessionId);
+      if (user?.id) formData.append("user_id", user.id);
 
-      const response = await fetch('https://juristmind.onrender.com/ask', { method: 'POST', body: formData });
-      if (!response.ok) throw new Error('Failed to get AI response');
-      if (!response.body) throw new Error('No response body from server');
+      const response = await fetch("https://juristmind.onrender.com/ask", { method: "POST", body: formData });
+      if (!response.ok) throw new Error("Failed to get AI response");
+      if (!response.body) throw new Error("No response body from server");
 
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
@@ -282,8 +283,7 @@ export function ChatInterface() {
         done = doneReading;
         if (value) {
           const chunk = decoder.decode(value, { stream: true });
-          const lines = chunk.split("\n\n");
-          for (const line of lines) {
+          for (const line of chunk.split("\n\n")) {
             if (!line.startsWith("data:")) continue;
             const dataStr = line.slice(5).trim();
             if (dataStr === "[DONE]") { done = true; break; }
@@ -291,230 +291,272 @@ export function ChatInterface() {
               const data = JSON.parse(dataStr);
               if (data.content) {
                 fullContent += data.content;
-                setMessages(prev => prev.map(msg => msg.id === aiTempId ? { ...msg, content: fullContent } : msg));
+                setMessages((prev) => prev.map((msg) => (msg.id === aiTempId ? { ...msg, content: fullContent } : msg)));
               }
-              if (data.type === "done") done = true;
-            } catch (parseError) {
-              console.log("Chunk parse info:", parseError);
-            }
+            } catch {}
           }
         }
       }
 
-      if (!fullContent) {
-        try {
-          const text = await response.text();
-          const data = JSON.parse(text);
-          fullContent = data.answer || data.content || "I'm JURIST MIND, your legal AI assistant.";
-          setMessages(prev => prev.map(msg => msg.id === aiTempId ? { ...msg, content: fullContent } : msg));
-        } catch {
-          fullContent = "Response received but could not be parsed.";
-        }
-      }
-
       if (fullContent) {
-        const aiDbId = await saveMessage(sessionId, fullContent, 'ai');
+        const aiDbId = await saveMessage(sessionId, fullContent, "ai");
         if (aiDbId) {
-          setMessages(prev => prev.map(msg => msg.id === aiTempId ? { ...msg, db_id: aiDbId } : msg));
+          setMessages((prev) => prev.map((msg) => (msg.id === aiTempId ? { ...msg, db_id: aiDbId } : msg)));
         }
       }
 
-      try {
-        await supabase.functions.invoke('increment-ai-usage', { body: { points: 1 } });
-      } catch (error) {
-        console.error('Error incrementing usage:', error);
-      }
+      try { await supabase.functions.invoke("increment-ai-usage", { body: { points: 1 } }); } catch {}
     } catch (error) {
-      console.error('Error calling AI:', error);
-      toast({ title: "Error", description: "Failed to connect to AI assistant. Please try again later.", variant: "destructive" });
+      console.error("Error calling AI:", error);
       const errorContent = "I'm having trouble connecting right now. Please try again later.";
-      setMessages(prev => prev.map(msg => msg.id === aiTempId ? { ...msg, content: errorContent } : msg));
-      await saveMessage(sessionId, errorContent, 'ai');
+      setMessages((prev) => prev.map((msg) => (msg.id === aiTempId ? { ...msg, content: errorContent } : msg)));
+      await saveMessage(sessionId, errorContent, "ai");
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleSendMessage = async () => {
+    if (!inputValue.trim()) return;
+    await processMessage(inputValue);
   };
 
   const loadSession = async (sessionId: string) => {
     try {
       setIsLoading(true);
       const { data, error } = await supabase
-        .from('chat_messages')
-        .select('id, content, sender, created_at')
-        .eq('session_id', sessionId)
-        .order('created_at', { ascending: true });
+        .from("chat_messages")
+        .select("id, content, sender, created_at")
+        .eq("session_id", sessionId)
+        .order("created_at", { ascending: true });
+
       if (error) throw error;
+
       if (!data || data.length === 0) {
         setMessages([]);
         setCurrentSessionId(sessionId);
         return;
       }
+
       const loadedMessages: Message[] = data.map((msg) => ({
-        id: msg.id, db_id: msg.id, content: msg.content,
-        sender: msg.sender as 'user' | 'ai', timestamp: new Date(msg.created_at), sources: [],
+        id: msg.id,
+        db_id: msg.id,
+        content: msg.content,
+        sender: msg.sender as "user" | "ai",
+        timestamp: new Date(msg.created_at),
+        sources: [],
       }));
+
       setMessages(loadedMessages);
       setCurrentSessionId(sessionId);
-      shouldAutoScrollRef.current = true;
-      setShowJumpToLatest(false);
       setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: "auto" }), 100);
     } catch (error) {
-      console.error('Error loading session:', error);
+      console.error("Error loading session:", error);
       toast({ title: "Error", description: "Failed to load chat session", variant: "destructive" });
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSendMessage(); }
-  };
-
-  const handleQuickPrompt = (prompt: string) => {
-    setInputValue(prompt);
-    setTimeout(() => inputRef.current?.focus(), 50);
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter") {
+      if (!e.shiftKey && !isMobile) {
+        e.preventDefault();
+        handleSendMessage();
+      }
+    }
   };
 
   return (
-    <div className="flex h-full chat-bg">
-      <div className="flex flex-col flex-1 h-full">
-        {/* Header */}
-        <div className="flex items-center justify-between px-6 py-3 border-b border-[rgba(255,255,255,0.06)]">
-          <h1 className="text-base font-semibold text-foreground tracking-tight">JURIST MIND</h1>
-          <Button
-            onClick={handleNewChat}
-            variant="ghost"
-            size="sm"
-            className="flex items-center gap-2 text-muted-foreground hover:text-foreground hover:bg-[rgba(255,255,255,0.05)] rounded-lg"
-          >
-            <Plus className="w-4 h-4" />
-            New Chat
-          </Button>
-        </div>
-        
-        {/* Messages */}
-        <div 
-          ref={messagesContainerRef}
-          onScroll={handleScroll}
-          className="flex-1 overflow-y-auto relative"
+    <div className="flex flex-col h-full chat-bg">
+      {/* Header */}
+      <div className="flex items-center justify-between px-6 py-3 border-b border-[rgba(255,255,255,0.06)] flex-shrink-0">
+        <h1 className="text-base font-semibold text-foreground tracking-tight">JURIST MIND</h1>
+        <Button
+          onClick={handleNewChat}
+          variant="ghost"
+          size="sm"
+          className="flex items-center gap-2 text-muted-foreground hover:text-foreground hover:bg-[rgba(255,255,255,0.05)] rounded-lg"
         >
-          <div className="max-w-3xl mx-auto p-6">
-            {messages.length === 0 ? (
-              <div className="text-center pt-[15vh] pb-10 animate-fade-in">
-                {/* Watermark icon */}
-                <div className="flex justify-center mb-6">
-                  <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center">
-                    <Scale className="w-6 h-6 text-primary/60" />
-                  </div>
+          <Plus className="w-4 h-4" />
+          New Chat
+        </Button>
+      </div>
+
+      {/* Messages */}
+      <div className="flex-1 overflow-y-auto">
+        <div className="max-w-3xl mx-auto p-6">
+          {messages.length === 0 ? (
+            <div className="text-center pt-[15vh] pb-10 animate-fade-in">
+              <div className="flex justify-center mb-6">
+                <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center">
+                  <Scale className="w-6 h-6 text-primary/60" />
                 </div>
-                
-                <h2 className="text-[clamp(2rem,5vw,3rem)] font-bold text-foreground mb-3 tracking-[-0.03em] bg-gradient-to-b from-foreground to-muted-foreground bg-clip-text text-transparent">
-                  JURIST MIND
-                </h2>
-                <p className="text-base text-muted-foreground mb-10 tracking-wide font-light">
-                  {user ? "What do you want to know?" : "Please sign in to start chatting"}
-                </p>
-
-                {/* Quick prompt chips */}
-                {user && (
-                  <div className="flex flex-wrap justify-center gap-2 mb-8">
-                    {quickPrompts.map((prompt) => (
-                      <button
-                        key={prompt}
-                        onClick={() => handleQuickPrompt(prompt)}
-                        className="px-4 py-2 rounded-full text-sm font-medium text-muted-foreground border border-[rgba(255,255,255,0.1)] hover:border-primary/50 hover:text-primary hover:bg-primary/5 transition-all btn-lift"
-                      >
-                        {prompt}
-                      </button>
-                    ))}
-                  </div>
-                )}
-
-                {!user && (
-                  <Button 
-                    onClick={() => navigate('/auth')}
-                    className="mt-4 bg-gradient-primary text-gold-foreground hover:shadow-gold-lg btn-lift btn-press font-semibold"
-                  >
-                    Sign In to Continue
-                  </Button>
-                )}
               </div>
-            ) : (
-              <div className="space-y-5">
-                {messages.map((message, index) => (
-                  <div
-                    key={message.id}
-                    className={`flex ${message.sender === "user" ? "justify-end" : "justify-start"} animate-fade-in-up`}
-                    style={{ animationDelay: `${Math.min(index * 30, 150)}ms` }}
-                  >
-                    {/* AI avatar */}
-                    {message.sender === "ai" && (
-                      <div className="w-7 h-7 rounded-full bg-primary/15 border border-primary/30 flex items-center justify-center mr-3 mt-1 flex-shrink-0">
-                        <Scale className="w-3.5 h-3.5 text-primary" />
+              <h2 className="text-[clamp(2rem,5vw,3rem)] font-bold text-foreground mb-3 tracking-[-0.03em] bg-gradient-to-b from-foreground to-muted-foreground bg-clip-text text-transparent">
+                JURIST MIND
+              </h2>
+              <p className="text-base text-muted-foreground mb-10 tracking-wide font-light">
+                {user ? "What do you want to know?" : "Please sign in to start chatting"}
+              </p>
+
+              {user && (
+                <div className="flex flex-wrap justify-center gap-2 mb-8">
+                  {quickPrompts.map((prompt) => (
+                    <button
+                      key={prompt}
+                      onClick={() => { setInputValue(prompt); setTimeout(() => inputRef.current?.focus(), 50); }}
+                      className="px-4 py-2 rounded-full text-sm font-medium text-muted-foreground border border-[rgba(255,255,255,0.1)] hover:border-primary/50 hover:text-primary hover:bg-primary/5 transition-all btn-lift"
+                    >
+                      {prompt}
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {!user && (
+                <Button
+                  onClick={() => navigate("/auth")}
+                  className="mt-4 bg-gradient-primary text-gold-foreground hover:shadow-gold-lg btn-lift btn-press font-semibold"
+                >
+                  Sign In to Continue
+                </Button>
+              )}
+            </div>
+          ) : (
+            <div className="space-y-6">
+              {messages.map((message, index) => (
+                <div
+                  key={message.id}
+                  className={`flex ${message.sender === "user" ? "justify-end" : "justify-start"} animate-fade-in-up`}
+                >
+                  {message.sender === "ai" && (
+                    <div className="w-7 h-7 rounded-full bg-primary/15 border border-primary/30 flex items-center justify-center mr-3 mt-1 flex-shrink-0">
+                      <Scale className="w-3.5 h-3.5 text-primary" />
+                    </div>
+                  )}
+
+                  <div className={`max-w-[75%] ${message.sender === "user" ? "msg-user" : "msg-ai"}`}>
+                    {message.content ? (
+                      <div className="prose prose-sm max-w-none dark:prose-invert prose-p:my-1 prose-headings:my-2">
+                        <ReactMarkdown
+                          remarkPlugins={[remarkGfm]}
+                          components={{
+                            p: ({ node, ...props }) => <p className="text-sm leading-relaxed my-1" {...props} />,
+                            strong: ({ node, ...props }) => <strong className="font-semibold" {...props} />,
+                            ul: ({ node, ...props }) => <ul className="list-disc pl-4 my-2 space-y-1 text-sm" {...props} />,
+                            ol: ({ node, ...props }) => <ol className="list-decimal pl-4 my-2 space-y-1 text-sm" {...props} />,
+                            li: ({ node, ...props }) => <li className="text-sm leading-relaxed" {...props} />,
+                            h1: ({ node, ...props }) => <h1 className="text-lg font-bold my-2" {...props} />,
+                            h2: ({ node, ...props }) => <h2 className="text-base font-bold my-2" {...props} />,
+                            h3: ({ node, ...props }) => <h3 className="text-sm font-semibold my-1" {...props} />,
+                            code: ({ node, className, ...props }) => (
+                              <code className="bg-black/20 rounded px-1 py-0.5 text-xs font-mono" {...props} />
+                            ),
+                            pre: ({ node, ...props }) => (
+                              <div className="relative my-2">
+                                <pre className="bg-black/30 rounded-lg p-3 overflow-x-auto text-xs font-mono" {...props} />
+                              </div>
+                            ),
+                            table: ({ node, ...props }) => (
+                              <div className="overflow-x-auto my-3">
+                                <table className="w-full text-xs border-collapse" {...props} />
+                              </div>
+                            ),
+                            thead: ({ node, ...props }) => <thead className="bg-primary/10" {...props} />,
+                            tbody: ({ node, ...props }) => <tbody {...props} />,
+                            tr: ({ node, ...props }) => <tr className="border-b border-[rgba(255,255,255,0.06)]" {...props} />,
+                            th: ({ node, ...props }) => (
+                              <th className="text-left px-3 py-2 font-semibold text-primary text-xs" {...props} />
+                            ),
+                            td: ({ node, ...props }) => <td className="px-3 py-2 text-xs" {...props} />,
+                          }}
+                        >
+                          {message.content}
+                        </ReactMarkdown>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-1.5 py-1">
+                        <span className="w-2 h-2 rounded-full bg-primary/60 typing-dot" />
+                        <span className="w-2 h-2 rounded-full bg-primary/60 typing-dot" />
+                        <span className="w-2 h-2 rounded-full bg-primary/60 typing-dot" />
                       </div>
                     )}
-                    <div className={`max-w-[70%] p-4 ${message.sender === "user" ? "msg-user" : "msg-ai"}`}>
-                      {message.content ? (
-                        <p className="text-sm leading-relaxed whitespace-pre-wrap">{message.content}</p>
-                      ) : (
-                        <div className="flex items-center gap-1.5 py-1">
-                          <span className="w-2 h-2 rounded-full bg-primary/60 typing-dot" />
-                          <span className="w-2 h-2 rounded-full bg-primary/60 typing-dot" />
-                          <span className="w-2 h-2 rounded-full bg-primary/60 typing-dot" />
-                        </div>
-                      )}
-                      <p className="text-[10px] text-muted-foreground mt-2">
-                        {message.timestamp.toLocaleTimeString()}
+
+                    {message.sender === "ai" && message.content && (
+                      <div className="flex items-center gap-1 mt-2 pt-2 border-t border-[rgba(255,255,255,0.06)]">
+                        <button
+                          onClick={() => handleCopy(message.content, message.id)}
+                          className="p-1 rounded hover:bg-primary/10 text-muted-foreground hover:text-primary transition-colors"
+                          title="Copy"
+                        >
+                          {copiedId === message.id ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+                        </button>
+                        {index === messages.length - 1 && !isLoading && (
+                          <button
+                            onClick={handleRegenerate}
+                            className="p-1 rounded hover:bg-primary/10 text-muted-foreground hover:text-primary transition-colors"
+                            title="Regenerate"
+                          >
+                            <RotateCcw className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                        <button
+                          onClick={() => handleFeedback(message, true)}
+                          className="p-1 rounded hover:bg-primary/10 text-muted-foreground hover:text-green-500 transition-colors"
+                        >
+                          <ThumbsUp className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          onClick={() => handleFeedback(message, false)}
+                          className="p-1 rounded hover:bg-primary/10 text-muted-foreground hover:text-destructive transition-colors"
+                        >
+                          <ThumbsDown className="w-3.5 h-3.5" />
+                        </button>
+                        <span className="text-[10px] text-muted-foreground ml-auto">
+                          {message.timestamp.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                        </span>
+                      </div>
+                    )}
+
+                    {message.sender === "user" && (
+                      <p className="text-[10px] text-muted-foreground mt-1 text-right">
+                        {message.timestamp.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
                       </p>
-                      {message.sender === "ai" && message.sources && message.sources.length > 0 && (
-                        <SourceDisplay sources={message.sources} />
-                      )}
-                    </div>
+                    )}
+
+                    {message.sender === "ai" && message.sources && message.sources.length > 0 && (
+                      <SourceDisplay sources={message.sources} />
+                    )}
                   </div>
-                ))}
-                <div ref={messagesEndRef} />
-              </div>
-            )}
-          </div>
-          
-          {/* Jump to Latest */}
-          {showJumpToLatest && (
-            <Button
-              onClick={handleJumpToLatest}
-              className="fixed bottom-32 left-1/2 transform -translate-x-1/2 z-10 flex items-center gap-2 bg-secondary/90 backdrop-blur-lg text-foreground border border-[rgba(255,255,255,0.1)] hover:border-primary/40 hover:shadow-gold rounded-full px-4 btn-lift"
-              size="sm"
-            >
-              <ArrowDown className="w-3.5 h-3.5" />
-              Jump to latest
-            </Button>
+                </div>
+              ))}
+              <div ref={messagesEndRef} />
+            </div>
           )}
         </div>
+      </div>
 
-        {/* Input Area */}
-        <div className="flex-shrink-0 px-6 pb-4 pt-2">
-          <div className="max-w-3xl mx-auto">
-            <div className="chat-input-glass rounded-2xl px-4 py-3 flex gap-3 items-center">
-              <Button
-                size="sm"
-                variant="ghost"
-                className="p-2 h-9 w-9 rounded-full text-muted-foreground hover:text-primary hover:bg-primary/10 flex-shrink-0"
-              >
+      {/* Input */}
+      <div className="flex-shrink-0 px-6 pb-4 pt-2">
+        <div className="max-w-3xl mx-auto">
+          <div className="chat-input-glass rounded-2xl px-4 py-3">
+            <div className="flex gap-3 items-end">
+              <Button size="sm" variant="ghost" className="p-2 h-9 w-9 rounded-full text-muted-foreground hover:text-primary hover:bg-primary/10 flex-shrink-0 mb-0.5">
                 <Paperclip className="w-4 h-4" />
               </Button>
-              <input
+              <TextareaAutosize
                 ref={inputRef}
                 value={inputValue}
                 onChange={(e) => setInputValue(e.target.value)}
-                onKeyPress={handleKeyPress}
+                onKeyDown={handleKeyDown}
                 placeholder="What do you want to know?"
-                className="flex-1 bg-transparent border-none outline-none text-sm text-foreground placeholder:text-muted-foreground/60 placeholder:italic"
+                minRows={1}
+                maxRows={6}
+                className="flex-1 bg-transparent border-none resize-none focus:outline-none focus:ring-0 text-sm text-foreground placeholder:text-muted-foreground/60 placeholder:italic py-2"
               />
-              <div className="flex gap-1.5 flex-shrink-0">
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  className="p-2 h-8 w-8 rounded-full text-muted-foreground hover:text-primary hover:bg-primary/10"
-                >
+              <div className="flex gap-1.5 flex-shrink-0 mb-0.5">
+                <Button size="sm" variant="ghost" className="p-2 h-8 w-8 rounded-full text-muted-foreground hover:text-primary hover:bg-primary/10">
                   <Mic className="w-4 h-4" />
                 </Button>
                 <button
@@ -526,15 +568,14 @@ export function ChatInterface() {
                 </button>
               </div>
             </div>
-            
-            <div className="text-center mt-3">
-              <p className="text-[10px] text-muted-foreground/60">
-                By using Jurist Mind, you consent to the{' '}
-                <NavLink to="/terms" className="text-primary/70 hover:text-primary hover:underline transition-colors">
-                  terms and conditions
-                </NavLink>
-              </p>
-            </div>
+          </div>
+          <div className="text-center mt-3">
+            <p className="text-[10px] text-muted-foreground/60">
+              By using Jurist Mind, you consent to the{" "}
+              <NavLink to="/terms" className="text-primary/70 hover:text-primary hover:underline transition-colors">
+                terms and conditions
+              </NavLink>
+            </p>
           </div>
         </div>
       </div>
