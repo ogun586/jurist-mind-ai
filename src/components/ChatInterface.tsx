@@ -74,13 +74,13 @@ export function ChatInterface() {
   useEffect(() => {
     if (!user) return;
     
-    if (urlSessionId && urlSessionId !== currentSessionId) {
+    if (urlSessionId) {
+      // Always clear + reload whenever the URL session changes
       setMessages([]);
       loadSession(urlSessionId);
-    } else if (!urlSessionId && currentSessionId) {
+    } else if (!urlSessionId) {
       setMessages([]);
       setCurrentSessionId(null);
-    } else if (!urlSessionId && !currentSessionId) {
       loadMostRecentSession();
     }
   }, [user, urlSessionId]);
