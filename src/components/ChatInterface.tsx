@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { Send, Mic, Paperclip, Copy, Check, RotateCcw, ThumbsUp, ThumbsDown, Plus, Scale } from "lucide-react";
+import { ShareButton } from "@/components/ShareButton";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
@@ -294,15 +295,18 @@ export function ChatInterface() {
       {/* Header */}
       <div className="flex items-center justify-between px-6 py-3 border-b border-[rgba(255,255,255,0.06)] flex-shrink-0">
         <h1 className="text-base font-semibold text-foreground tracking-tight">JURIST MIND</h1>
-        <Button
-          onClick={handleNewChat}
-          variant="ghost"
-          size="sm"
-          className="flex items-center gap-2 text-muted-foreground hover:text-foreground hover:bg-[rgba(255,255,255,0.05)] rounded-lg"
-        >
-          <Plus className="w-4 h-4" />
-          New Chat
-        </Button>
+        <div className="flex items-center gap-1">
+          <ShareButton sessionId={currentSessionId} />
+          <Button
+            onClick={handleNewChat}
+            variant="ghost"
+            size="sm"
+            className="flex items-center gap-2 text-muted-foreground hover:text-foreground hover:bg-[rgba(255,255,255,0.05)] rounded-lg"
+          >
+            <Plus className="w-4 h-4" />
+            New Chat
+          </Button>
+        </div>
       </div>
 
       {/* Messages */}
