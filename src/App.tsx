@@ -25,6 +25,7 @@ import Upgrade from "./pages/Upgrade";
 import NotFound from "./pages/NotFound";
 import Terms from "./pages/Terms";
 import Profile from "./pages/Profile";
+import SharedChatView from "./pages/SharedChatView";
 
 const queryClient = new QueryClient();
 
@@ -39,6 +40,7 @@ const App = () => (
             {/* Unauthenticated routes */}
             <Route path="/auth" element={<Auth />} />
             <Route path="/terms" element={<Terms />} />
+            <Route path="/share/:token" element={<SharedChatView />} />
             
             {/* All other routes are protected with sidebar */}
             <Route path="/*" element={

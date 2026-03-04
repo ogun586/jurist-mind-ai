@@ -159,6 +159,7 @@ export type Database = {
         Row: {
           created_at: string
           id: string
+          is_shared: boolean | null
           title: string
           updated_at: string
           user_id: string
@@ -166,6 +167,7 @@ export type Database = {
         Insert: {
           created_at?: string
           id?: string
+          is_shared?: boolean | null
           title?: string
           updated_at?: string
           user_id: string
@@ -173,6 +175,7 @@ export type Database = {
         Update: {
           created_at?: string
           id?: string
+          is_shared?: boolean | null
           title?: string
           updated_at?: string
           user_id?: string
@@ -1146,6 +1149,47 @@ export type Database = {
           status?: string
         }
         Relationships: []
+      }
+      shared_chats: {
+        Row: {
+          chat_session_id: string
+          created_at: string | null
+          expires_at: string | null
+          id: string
+          is_active: boolean | null
+          share_token: string
+          user_id: string
+          view_count: number | null
+        }
+        Insert: {
+          chat_session_id: string
+          created_at?: string | null
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          share_token: string
+          user_id: string
+          view_count?: number | null
+        }
+        Update: {
+          chat_session_id?: string
+          created_at?: string | null
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          share_token?: string
+          user_id?: string
+          view_count?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shared_chats_chat_session_id_fkey"
+            columns: ["chat_session_id"]
+            isOneToOne: false
+            referencedRelation: "chat_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       subscriptions: {
         Row: {
