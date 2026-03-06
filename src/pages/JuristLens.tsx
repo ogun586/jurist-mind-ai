@@ -361,10 +361,6 @@ export default function JuristLens() {
     setQuestion(TEMPLATES[name]);
   };
 
-  // ── Ensure session ──────────────────────────────────────────────────────────
-  const ensureSession = async (): Promise<string> => {
-    if (sessionId) return sessionId;
-
   // ── Auth guard (after all hooks) ───────────────────────────────────────────
   if (authLoading) return (
     <div className="h-full flex items-center justify-center bg-background">
@@ -373,11 +369,14 @@ export default function JuristLens() {
   );
   if (!user) return <Navigate to="/auth" replace />;
 
-  const includedDocs = docs.filter(d => d.included);
+  // ── Ensure session ──────────────────────────────────────────────────────────
+  const ensureSession = async (): Promise<string> => {
+    if (sessionId) return sessionId;
+    const includedDocs = docs.filter(d => d.included);
     const { data, error } = await supabase
       .from("juristlens_sessions")
       .insert({
-        lawyer_id: user!.id,
+        lawyer_id: user.id,
         mode,
         document_urls: includedDocs.map(d => d.url),
         document_names: includedDocs.map(d => d.name),
