@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Search, MessageCircle, Scale, History, User, ShoppingBag, Briefcase, FileText, BookOpen, FolderOpen, Crown, Plus } from "lucide-react";
+import { Search, MessageCircle, Scale, History, User, ShoppingBag, Briefcase, FileText, BookOpen, FolderOpen, Crown, Plus, ScanSearch } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 import {
   Sidebar,
@@ -19,6 +19,7 @@ const navigationItems = [
   { title: "Search", url: "/search", icon: Search },
   { title: "Chat", url: "/", icon: MessageCircle },
   { title: "JTL", url: "/jtl", icon: Scale },
+  { title: "JuristLens", url: "/juristlens", icon: ScanSearch },
   { title: "Marketplace", url: "/marketplace", icon: ShoppingBag },
   { title: "Find/Post Jobs", url: "/jobs", icon: Briefcase },
   { title: "Latest Cases Report", url: "/judge-notes", icon: FileText },

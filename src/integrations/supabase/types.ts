@@ -626,6 +626,89 @@ export type Database = {
         }
         Relationships: []
       }
+      juristlens_messages: {
+        Row: {
+          answer: string | null
+          clause: string | null
+          confidence: string | null
+          created_at: string
+          document_name: string | null
+          message_id: string
+          page_number: number | null
+          question: string
+          session_id: string
+        }
+        Insert: {
+          answer?: string | null
+          clause?: string | null
+          confidence?: string | null
+          created_at?: string
+          document_name?: string | null
+          message_id?: string
+          page_number?: number | null
+          question: string
+          session_id: string
+        }
+        Update: {
+          answer?: string | null
+          clause?: string | null
+          confidence?: string | null
+          created_at?: string
+          document_name?: string | null
+          message_id?: string
+          page_number?: number | null
+          question?: string
+          session_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "juristlens_messages_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "juristlens_sessions"
+            referencedColumns: ["session_id"]
+          },
+        ]
+      }
+      juristlens_sessions: {
+        Row: {
+          created_at: string
+          document_name: string | null
+          document_names: Json | null
+          document_url: string | null
+          document_urls: Json | null
+          lawyer_id: string
+          mode: string
+          page_count: number | null
+          session_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          document_name?: string | null
+          document_names?: Json | null
+          document_url?: string | null
+          document_urls?: Json | null
+          lawyer_id: string
+          mode?: string
+          page_count?: number | null
+          session_id?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          document_name?: string | null
+          document_names?: Json | null
+          document_url?: string | null
+          document_urls?: Json | null
+          lawyer_id?: string
+          mode?: string
+          page_count?: number | null
+          session_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       lawyer_credentials: {
         Row: {
           created_at: string | null
