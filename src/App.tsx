@@ -64,6 +64,7 @@ const App = () => (
                           <Route path="/lawyers/:slug" element={<LawyerProfilePage />} />
                           <Route path="/judge-notes" element={<JudgeNotes />} />
                           <Route path="/jtl" element={<JTL />} />
+                          <Route path="/juristlens" element={<JuristLens />} />
                           <Route path="/history" element={<History />} />
                           <Route path="/upgrade" element={<Upgrade />} />
                           <Route path="/profile" element={<Profile />} />
