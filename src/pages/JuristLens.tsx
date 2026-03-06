@@ -299,14 +299,6 @@ export default function JuristLens() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const slowTimerRef = useRef<NodeJS.Timeout | null>(null);
 
-  // ── Auth guard ──────────────────────────────────────────────────────────────
-  if (authLoading) return (
-    <div className="h-full flex items-center justify-center bg-background">
-      <Loader2 className="w-6 h-6 text-primary animate-spin" />
-    </div>
-  );
-  if (!user) return <Navigate to="/auth" replace />;
-
   // ── Upload handler ──────────────────────────────────────────────────────────
   const uploadFiles = async (files: FileList | File[]) => {
     const arr = Array.from(files);
