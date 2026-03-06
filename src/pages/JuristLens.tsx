@@ -365,7 +365,15 @@ export default function JuristLens() {
   const ensureSession = async (): Promise<string> => {
     if (sessionId) return sessionId;
 
-    const includedDocs = docs.filter(d => d.included);
+  // ── Auth guard (after all hooks) ───────────────────────────────────────────
+  if (authLoading) return (
+    <div className="h-full flex items-center justify-center bg-background">
+      <Loader2 className="w-6 h-6 text-primary animate-spin" />
+    </div>
+  );
+  if (!user) return <Navigate to="/auth" replace />;
+
+  const includedDocs = docs.filter(d => d.included);
     const { data, error } = await supabase
       .from("juristlens_sessions")
       .insert({
@@ -706,7 +714,7 @@ export default function JuristLens() {
 
             {/* Slow warning */}
             {slowWarning && (
-              <div className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-amber-500/20 bg-amber-500/5 text-amber-400 text-xs animate-fade-in">
+              <div className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-status-pending/20 bg-status-pending/5 text-status-pending text-xs animate-fade-in">
                 <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0" />
                 Large document detected — this may take a moment…
               </div>

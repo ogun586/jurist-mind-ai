@@ -20,6 +20,7 @@ import LawyersDirectory from "./pages/LawyersDirectory";
 import { LawyerProfilePage } from "@/components/lawyers";
 import JudgeNotes from "./pages/JudgeNotes";
 import JTL from "./pages/JTL";
+import JuristLens from "./pages/JuristLens";
 import History from "./pages/History";
 import Upgrade from "./pages/Upgrade";
 import NotFound from "./pages/NotFound";
