@@ -319,7 +319,7 @@ export default function JuristLens() {
         continue;
       }
 
-      const path = `${user.id}/${Date.now()}_${file.name}`;
+      const path = `${user!.id}/${Date.now()}_${file.name}`;
       const { data, error } = await supabase.storage
         .from("juristlens-documents")
         .upload(path, file, { upsert: true });
