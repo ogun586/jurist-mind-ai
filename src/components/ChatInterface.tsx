@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+// Plus is used in the header New Chat button
 import { Send, Mic, Paperclip, Copy, Check, RotateCcw, ThumbsUp, ThumbsDown, Scale } from "lucide-react";
 import { ShareButton } from "@/components/ShareButton";
 import { Button } from "@/components/ui/button";
