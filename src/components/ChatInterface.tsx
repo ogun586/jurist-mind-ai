@@ -540,21 +540,16 @@ export function ChatInterface() {
                 disabled={!inputValue.trim() || isLoading || !user}
                 className="w-8 h-8 rounded-full bg-primary flex items-center justify-center hover:bg-primary/80 disabled:opacity-25 transition-all"
               >
-                  style={{ background: (!inputValue.trim() || isLoading || !user) ? undefined : "var(--gradient-primary)" }}
-                >
-                  <Send className="w-3.5 h-3.5 text-gold-foreground" />
-                </button>
-              </div>
+                <Send className="w-3.5 h-3.5 text-primary-foreground" />
+              </button>
             </div>
           </div>
-          <div className="text-center mt-3">
-            <p className="text-[10px] text-muted-foreground/50">
-              By using Jurist Mind, you consent to the{" "}
-              <NavLink to="/terms" className="text-primary/70 hover:text-primary hover:underline transition-colors">
-                terms and conditions
-              </NavLink>
-            </p>
-          </div>
+          <p className="text-center mt-2.5 text-[11px] text-muted-foreground/40">
+            By using Jurist Mind, you consent to the{" "}
+            <NavLink to="/terms" className="text-primary/60 hover:text-primary hover:underline transition-colors">
+              terms and conditions
+            </NavLink>
+          </p>
         </div>
       </div>
     </div>
