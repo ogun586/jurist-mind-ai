@@ -214,8 +214,8 @@ export function CTCUploadModal({ noteId, open, onOpenChange, onUploadComplete }:
                 <p className="text-foreground font-medium mb-1">
                   Drag and drop your PDF here
                 </p>
-                <p className="text-sm text-muted-foreground">
-                  or click to browse (max 15MB)
+                  <p className="text-sm text-muted-foreground">
+                  or click to browse (max 49MB)
                 </p>
               </>
             )}
