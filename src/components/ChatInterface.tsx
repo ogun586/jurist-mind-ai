@@ -510,39 +510,36 @@ export function ChatInterface() {
       </div>
 
       {/* Input */}
-      <div className="flex-shrink-0 px-6 pb-4 pt-2">
+      <div className="flex-shrink-0 px-5 pb-4 pt-2">
         <div className="max-w-3xl mx-auto">
-          <div className="chat-input-glass rounded-2xl px-4 py-3">
-            <div className="flex gap-3 items-end">
-              <Button
-                size="sm"
-                variant="ghost"
-                className="p-2 h-9 w-9 rounded-full text-muted-foreground hover:text-primary hover:bg-primary/10 flex-shrink-0 mb-0.5"
+          <div className="flex items-end gap-3 bg-[rgba(255,255,255,0.04)] border border-[rgba(255,255,255,0.08)] rounded-2xl px-4 py-3 focus-within:border-[rgba(255,255,255,0.14)] transition-colors">
+            {/* Attachment */}
+            <button className="flex-shrink-0 mb-0.5 p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-[rgba(255,255,255,0.06)] transition-colors">
+              <Paperclip className="w-4 h-4" strokeWidth={1.8} />
+            </button>
+
+            {/* Text input */}
+            <TextareaAutosize
+              ref={inputRef}
+              value={inputValue}
+              onChange={(e) => setInputValue(e.target.value)}
+              onKeyDown={handleKeyDown}
+              placeholder="Ask anything legal…"
+              minRows={1}
+              maxRows={6}
+              className="flex-1 bg-transparent border-none resize-none focus:outline-none focus:ring-0 text-[14px] text-foreground placeholder:text-muted-foreground/50 py-0.5 leading-6"
+            />
+
+            {/* Mic + Send */}
+            <div className="flex items-center gap-1.5 flex-shrink-0 mb-0.5">
+              <button className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-[rgba(255,255,255,0.06)] transition-colors">
+                <Mic className="w-4 h-4" strokeWidth={1.8} />
+              </button>
+              <button
+                onClick={handleSendMessage}
+                disabled={!inputValue.trim() || isLoading || !user}
+                className="w-8 h-8 rounded-full bg-primary flex items-center justify-center hover:bg-primary/80 disabled:opacity-25 transition-all"
               >
-                <Paperclip className="w-4 h-4" />
-              </Button>
-              <TextareaAutosize
-                ref={inputRef}
-                value={inputValue}
-                onChange={(e) => setInputValue(e.target.value)}
-                onKeyDown={handleKeyDown}
-                placeholder="What do you want to know?"
-                minRows={1}
-                maxRows={6}
-                className="flex-1 bg-transparent border-none resize-none focus:outline-none focus:ring-0 text-sm text-foreground placeholder:text-muted-foreground/60 placeholder:italic py-2"
-              />
-              <div className="flex gap-1.5 flex-shrink-0 mb-0.5">
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  className="p-2 h-8 w-8 rounded-full text-muted-foreground hover:text-primary hover:bg-primary/10"
-                >
-                  <Mic className="w-4 h-4" />
-                </Button>
-                <button
-                  onClick={handleSendMessage}
-                  disabled={!inputValue.trim() || isLoading || !user}
-                  className="h-8 w-8 rounded-full bg-gradient-primary flex items-center justify-center shadow-gold hover:shadow-gold-lg btn-lift btn-press disabled:opacity-30 disabled:bg-muted disabled:shadow-none disabled:bg-none transition-all"
                   style={{ background: (!inputValue.trim() || isLoading || !user) ? undefined : "var(--gradient-primary)" }}
                 >
                   <Send className="w-3.5 h-3.5 text-gold-foreground" />
