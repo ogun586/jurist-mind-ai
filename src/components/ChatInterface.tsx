@@ -313,26 +313,32 @@ export function ChatInterface() {
       <div className="flex-1 overflow-y-auto">
         <div className="max-w-3xl mx-auto p-6">
           {messages.length === 0 ? (
-            <div className="text-center pt-[15vh] pb-10 animate-fade-in">
-              <div className="flex justify-center mb-6">
-                <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center">
-                  <Scale className="w-6 h-6 text-primary/60" />
+            <div className="text-center pt-[12vh] pb-10 animate-fade-in select-none">
+              {/* Circular logo badge */}
+              <div className="flex justify-center mb-7">
+                <div className="w-[72px] h-[72px] rounded-full bg-foreground flex items-center justify-center shadow-[0_4px_32px_rgba(0,0,0,0.5)]">
+                  <span className="text-background text-3xl font-bold tracking-tight leading-none" style={{ fontFamily: "serif" }}>J</span>
                 </div>
               </div>
-              <h2 className="text-[clamp(2rem,5vw,3rem)] font-bold text-foreground mb-3 tracking-[-0.03em] bg-gradient-to-b from-foreground to-muted-foreground bg-clip-text text-transparent">
+
+              {/* Heading */}
+              <h2 className="text-[clamp(2rem,5vw,2.8rem)] font-extrabold text-foreground mb-3 tracking-[-0.02em]">
                 JURIST MIND
               </h2>
-              <p className="text-base text-muted-foreground mb-10 tracking-wide font-light">
-                {user ? "What do you want to know?" : "Please sign in to start chatting"}
+
+              {/* Subtitle */}
+              <p className="text-[15px] text-muted-foreground mb-10 font-light">
+                {user ? "Your AI-powered legal research assistant" : "Please sign in to start chatting"}
               </p>
 
+              {/* Quick prompts */}
               {user && (
-                <div className="flex flex-wrap justify-center gap-2 mb-8">
+                <div className="flex flex-wrap justify-center gap-2.5 mb-8">
                   {quickPrompts.map((prompt) => (
                     <button
                       key={prompt}
                       onClick={() => { setInputValue(prompt); setTimeout(() => inputRef.current?.focus(), 50); }}
-                      className="px-4 py-2 rounded-full text-sm font-medium text-muted-foreground border border-[rgba(255,255,255,0.1)] hover:border-primary/50 hover:text-primary hover:bg-primary/5 transition-all btn-lift"
+                      className="px-5 py-2 rounded-full text-[13px] font-medium text-muted-foreground border border-[rgba(255,255,255,0.1)] hover:border-primary/40 hover:text-foreground hover:bg-[rgba(255,255,255,0.04)] transition-all"
                     >
                       {prompt}
                     </button>
@@ -343,7 +349,7 @@ export function ChatInterface() {
               {!user && (
                 <Button
                   onClick={() => navigate("/auth")}
-                  className="mt-4 bg-gradient-primary text-gold-foreground hover:shadow-gold-lg btn-lift btn-press font-semibold"
+                  className="mt-4 bg-foreground text-background hover:bg-foreground/90 font-semibold"
                 >
                   Sign In to Continue
                 </Button>
