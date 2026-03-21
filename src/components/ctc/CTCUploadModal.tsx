@@ -34,14 +34,14 @@ export function CTCUploadModal({ noteId, open, onOpenChange, onUploadComplete }:
     case_reference: "",
   });
 
-  const MAX_FILE_SIZE = 15 * 1024 * 1024; // 15MB
+  const MAX_FILE_SIZE = 49 * 1024 * 1024; // 49MB
 
   const validateFile = (file: File): string | null => {
     if (file.type !== "application/pdf") {
       return "Only PDF files are allowed";
     }
     if (file.size > MAX_FILE_SIZE) {
-      return "File size must be less than 15MB";
+      return "File size must be less than 49MB";
     }
     return null;
   };

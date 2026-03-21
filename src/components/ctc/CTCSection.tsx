@@ -229,7 +229,7 @@ export function CTCSection({ noteId }: CTCSectionProps) {
                         <p className="font-medium mb-1">Accepted Format:</p>
                         <ul className="list-disc list-inside space-y-0.5">
                           <li>PDF files only</li>
-                          <li>Maximum file size: 15MB</li>
+                          <li>Maximum file size: 49MB</li>
                           <li>Required: Judgment date, court, and judge name</li>
                         </ul>
                       </div>
