@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { Send, Mic, Paperclip, Copy, Check, RotateCcw, ThumbsUp, ThumbsDown, Plus, Scale } from "lucide-react";
+import { Send, Mic, Paperclip, Copy, Check, RotateCcw, ThumbsUp, ThumbsDown, Scale, Plus } from "lucide-react";
 import { ShareButton } from "@/components/ShareButton";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
@@ -313,26 +313,32 @@ export function ChatInterface() {
       <div className="flex-1 overflow-y-auto">
         <div className="max-w-3xl mx-auto p-6">
           {messages.length === 0 ? (
-            <div className="text-center pt-[15vh] pb-10 animate-fade-in">
-              <div className="flex justify-center mb-6">
-                <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center">
-                  <Scale className="w-6 h-6 text-primary/60" />
+            <div className="text-center pt-[12vh] pb-10 animate-fade-in select-none">
+              {/* Circular logo badge */}
+              <div className="flex justify-center mb-7">
+                <div className="w-[72px] h-[72px] rounded-full bg-foreground flex items-center justify-center shadow-[0_4px_32px_rgba(0,0,0,0.5)]">
+                  <span className="text-background text-3xl font-bold tracking-tight leading-none" style={{ fontFamily: "serif" }}>J</span>
                 </div>
               </div>
-              <h2 className="text-[clamp(2rem,5vw,3rem)] font-bold text-foreground mb-3 tracking-[-0.03em] bg-gradient-to-b from-foreground to-muted-foreground bg-clip-text text-transparent">
+
+              {/* Heading */}
+              <h2 className="text-[clamp(2rem,5vw,2.8rem)] font-extrabold text-foreground mb-3 tracking-[-0.02em]">
                 JURIST MIND
               </h2>
-              <p className="text-base text-muted-foreground mb-10 tracking-wide font-light">
-                {user ? "What do you want to know?" : "Please sign in to start chatting"}
+
+              {/* Subtitle */}
+              <p className="text-[15px] text-muted-foreground mb-10 font-light">
+                {user ? "Your AI-powered legal research assistant" : "Please sign in to start chatting"}
               </p>
 
+              {/* Quick prompts */}
               {user && (
-                <div className="flex flex-wrap justify-center gap-2 mb-8">
+                <div className="flex flex-wrap justify-center gap-2.5 mb-8">
                   {quickPrompts.map((prompt) => (
                     <button
                       key={prompt}
                       onClick={() => { setInputValue(prompt); setTimeout(() => inputRef.current?.focus(), 50); }}
-                      className="px-4 py-2 rounded-full text-sm font-medium text-muted-foreground border border-[rgba(255,255,255,0.1)] hover:border-primary/50 hover:text-primary hover:bg-primary/5 transition-all btn-lift"
+                      className="px-5 py-2 rounded-full text-[13px] font-medium text-muted-foreground border border-[rgba(255,255,255,0.1)] hover:border-primary/40 hover:text-foreground hover:bg-[rgba(255,255,255,0.04)] transition-all"
                     >
                       {prompt}
                     </button>
@@ -343,7 +349,7 @@ export function ChatInterface() {
               {!user && (
                 <Button
                   onClick={() => navigate("/auth")}
-                  className="mt-4 bg-gradient-primary text-gold-foreground hover:shadow-gold-lg btn-lift btn-press font-semibold"
+                  className="mt-4 bg-foreground text-background hover:bg-foreground/90 font-semibold"
                 >
                   Sign In to Continue
                 </Button>
@@ -504,54 +510,46 @@ export function ChatInterface() {
       </div>
 
       {/* Input */}
-      <div className="flex-shrink-0 px-6 pb-4 pt-2">
+      <div className="flex-shrink-0 px-5 pb-4 pt-2">
         <div className="max-w-3xl mx-auto">
-          <div className="chat-input-glass rounded-2xl px-4 py-3">
-            <div className="flex gap-3 items-end">
-              <Button
-                size="sm"
-                variant="ghost"
-                className="p-2 h-9 w-9 rounded-full text-muted-foreground hover:text-primary hover:bg-primary/10 flex-shrink-0 mb-0.5"
+          <div className="flex items-end gap-3 bg-[rgba(255,255,255,0.04)] border border-[rgba(255,255,255,0.08)] rounded-2xl px-4 py-3 focus-within:border-[rgba(255,255,255,0.14)] transition-colors">
+            {/* Attachment */}
+            <button className="flex-shrink-0 mb-0.5 p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-[rgba(255,255,255,0.06)] transition-colors">
+              <Paperclip className="w-4 h-4" strokeWidth={1.8} />
+            </button>
+
+            {/* Text input */}
+            <TextareaAutosize
+              ref={inputRef}
+              value={inputValue}
+              onChange={(e) => setInputValue(e.target.value)}
+              onKeyDown={handleKeyDown}
+              placeholder="Ask anything legal…"
+              minRows={1}
+              maxRows={6}
+              className="flex-1 bg-transparent border-none resize-none focus:outline-none focus:ring-0 text-[14px] text-foreground placeholder:text-muted-foreground/50 py-0.5 leading-6"
+            />
+
+            {/* Mic + Send */}
+            <div className="flex items-center gap-1.5 flex-shrink-0 mb-0.5">
+              <button className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-[rgba(255,255,255,0.06)] transition-colors">
+                <Mic className="w-4 h-4" strokeWidth={1.8} />
+              </button>
+              <button
+                onClick={handleSendMessage}
+                disabled={!inputValue.trim() || isLoading || !user}
+                className="w-8 h-8 rounded-full bg-primary flex items-center justify-center hover:bg-primary/80 disabled:opacity-25 transition-all"
               >
-                <Paperclip className="w-4 h-4" />
-              </Button>
-              <TextareaAutosize
-                ref={inputRef}
-                value={inputValue}
-                onChange={(e) => setInputValue(e.target.value)}
-                onKeyDown={handleKeyDown}
-                placeholder="What do you want to know?"
-                minRows={1}
-                maxRows={6}
-                className="flex-1 bg-transparent border-none resize-none focus:outline-none focus:ring-0 text-sm text-foreground placeholder:text-muted-foreground/60 placeholder:italic py-2"
-              />
-              <div className="flex gap-1.5 flex-shrink-0 mb-0.5">
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  className="p-2 h-8 w-8 rounded-full text-muted-foreground hover:text-primary hover:bg-primary/10"
-                >
-                  <Mic className="w-4 h-4" />
-                </Button>
-                <button
-                  onClick={handleSendMessage}
-                  disabled={!inputValue.trim() || isLoading || !user}
-                  className="h-8 w-8 rounded-full bg-gradient-primary flex items-center justify-center shadow-gold hover:shadow-gold-lg btn-lift btn-press disabled:opacity-30 disabled:bg-muted disabled:shadow-none disabled:bg-none transition-all"
-                  style={{ background: (!inputValue.trim() || isLoading || !user) ? undefined : "var(--gradient-primary)" }}
-                >
-                  <Send className="w-3.5 h-3.5 text-gold-foreground" />
-                </button>
-              </div>
+                <Send className="w-3.5 h-3.5 text-primary-foreground" />
+              </button>
             </div>
           </div>
-          <div className="text-center mt-3">
-            <p className="text-[10px] text-muted-foreground/50">
-              By using Jurist Mind, you consent to the{" "}
-              <NavLink to="/terms" className="text-primary/70 hover:text-primary hover:underline transition-colors">
-                terms and conditions
-              </NavLink>
-            </p>
-          </div>
+          <p className="text-center mt-2.5 text-[11px] text-muted-foreground/40">
+            By using Jurist Mind, you consent to the{" "}
+            <NavLink to="/terms" className="text-primary/60 hover:text-primary hover:underline transition-colors">
+              terms and conditions
+            </NavLink>
+          </p>
         </div>
       </div>
     </div>
