@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { Send, Mic, Paperclip, Copy, Check, RotateCcw, ThumbsUp, ThumbsDown, Plus, Scale } from "lucide-react";
+import { Send, Mic, Paperclip, Copy, Check, RotateCcw, ThumbsUp, ThumbsDown, Scale } from "lucide-react";
 import { ShareButton } from "@/components/ShareButton";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
