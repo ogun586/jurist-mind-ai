@@ -303,3 +303,54 @@
 .scrollbar-hide::-webkit-scrollbar {
   display: none;
 }
+
+/* ─── react-phone-number-input styles ─────────────────────────────────── */
+.phone-input-wrapper {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  gap: 0.5rem;
+}
+
+.phone-input-wrapper .PhoneInputCountry {
+  display: flex;
+  align-items: center;
+}
+
+.phone-input-wrapper .PhoneInputCountrySelect {
+  background: transparent;
+  border: none;
+  outline: none;
+  cursor: pointer;
+  font-size: 0.875rem;
+  color: hsl(var(--foreground));
+  appearance: none;
+  padding-right: 0.25rem;
+}
+
+.phone-input-wrapper .PhoneInputCountrySelectArrow {
+  color: hsl(var(--muted-foreground));
+  margin-left: 2px;
+}
+
+.phone-input-wrapper .PhoneInputCountryIcon {
+  width: 1.25rem;
+  height: 1.25rem;
+}
+
+.phone-input-wrapper .PhoneInputInput {
+  flex: 1;
+  border: none;
+  outline: none;
+  background: transparent;
+  font-size: 0.875rem;
+  color: hsl(var(--foreground));
+  font-family: inherit;
+  width: 100%;
+  padding: 0;
+}
+
+.phone-input-wrapper .PhoneInputInput::placeholder {
+  color: hsl(var(--muted-foreground));
+}
+
