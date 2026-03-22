@@ -30,7 +30,7 @@ const variants = {
   }),
 };
 
-const transition = { duration: 0.38, ease: [0.25, 0.46, 0.45, 0.94] };
+const transition = { duration: 0.38, ease: 'easeInOut' as const };
 
 // ─── Shared Input Style ──────────────────────────────────────────────────────
 const inputStyle: React.CSSProperties = {
