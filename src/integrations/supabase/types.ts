@@ -1154,14 +1154,22 @@ export type Database = {
         Row: {
           avatar_url: string | null
           bio: string | null
+          country: string | null
           created_at: string
           display_name: string | null
           email: string | null
+          full_name: string | null
           id: string
+          law_firm: string | null
+          location_in_country: string | null
+          occupation: string | null
+          onboarding_completed: boolean | null
           phone: string | null
           plan_expires_at: string | null
           plan_key: string | null
           plan_started_at: string | null
+          school_country: string | null
+          school_name: string | null
           updated_at: string
           user_id: string
           user_type: string | null
@@ -1169,14 +1177,22 @@ export type Database = {
         Insert: {
           avatar_url?: string | null
           bio?: string | null
+          country?: string | null
           created_at?: string
           display_name?: string | null
           email?: string | null
+          full_name?: string | null
           id?: string
+          law_firm?: string | null
+          location_in_country?: string | null
+          occupation?: string | null
+          onboarding_completed?: boolean | null
           phone?: string | null
           plan_expires_at?: string | null
           plan_key?: string | null
           plan_started_at?: string | null
+          school_country?: string | null
+          school_name?: string | null
           updated_at?: string
           user_id: string
           user_type?: string | null
@@ -1184,14 +1200,22 @@ export type Database = {
         Update: {
           avatar_url?: string | null
           bio?: string | null
+          country?: string | null
           created_at?: string
           display_name?: string | null
           email?: string | null
+          full_name?: string | null
           id?: string
+          law_firm?: string | null
+          location_in_country?: string | null
+          occupation?: string | null
+          onboarding_completed?: boolean | null
           phone?: string | null
           plan_expires_at?: string | null
           plan_key?: string | null
           plan_started_at?: string | null
+          school_country?: string | null
+          school_name?: string | null
           updated_at?: string
           user_id?: string
           user_type?: string | null

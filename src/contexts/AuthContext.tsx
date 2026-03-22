@@ -5,12 +5,14 @@ import { supabase } from '@/integrations/supabase/client';
 interface AuthContextType {
   user: User | null;
   session: Session | null;
+  profile: any | null;
   loading: boolean;
   signIn: (email: string, password: string) => Promise<{ error: any }>;
-  signUp: (email: string, password: string, displayName?: string, phone?: string, userType?: string) => Promise<{ error: any }>;
+  signUp: (email: string, password: string, displayName?: string, phone?: string, userType?: string) => Promise<{ error: any; data?: any }>;
   signInWithGoogle: () => Promise<{ error: any }>;
   signOut: () => Promise<void>;
   verifyEmail: (email: string, code: string) => Promise<{ error: any }>;
+  refreshProfile: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -18,15 +20,41 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
+  const [profile, setProfile] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
 
+  // Fetch profile from DB
+  const fetchProfile = async (userId: string) => {
+    try {
+      const { data } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('user_id', userId)
+        .maybeSingle();
+      if (data) setProfile(data);
+      else setProfile(null);
+    } catch {
+      setProfile(null);
+    }
+  };
+
+  const refreshProfile = async () => {
+    if (user) await fetchProfile(user.id);
+  };
+
   useEffect(() => {
-    // Set up auth state listener
+    // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
+      async (event, session) => {
         setSession(session);
         setUser(session?.user ?? null);
         setLoading(false);
+        if (session?.user) {
+          // Defer to avoid Supabase deadlock
+          setTimeout(() => fetchProfile(session.user.id), 0);
+        } else {
+          setProfile(null);
+        }
       }
     );
 
@@ -35,50 +63,45 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setSession(session);
       setUser(session?.user ?? null);
       setLoading(false);
+      if (session?.user) fetchProfile(session.user.id);
     });
 
     return () => subscription.unsubscribe();
   }, []);
 
   const signIn = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
     return { error };
   };
 
-  const signUp = async (email: string, password: string, displayName?: string, phone?: string, userType?: string) => {
-    try {
-      // First send verification code
-      const { error: codeError } = await supabase.functions.invoke('send-verification-code', {
-        body: { 
-          email,
-          userData: { email, password, displayName, phone, userType }
-        }
-      });
-      
-      if (codeError) {
-        return { error: codeError };
-      }
-      
-      return { error: null };
-    } catch (error) {
-      return { error };
-    }
+  const signUp = async (
+    email: string,
+    password: string,
+    displayName?: string,
+    phone?: string,
+    userType?: string
+  ) => {
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: {
+          display_name: displayName || '',
+          full_name: displayName || '',
+          phone: phone || '',
+          user_type: userType || '',
+        },
+      },
+    });
+    return { data, error };
   };
 
   const verifyEmail = async (email: string, code: string) => {
     try {
-      // Verify the code and create the user account
       const { error: verifyError } = await supabase.functions.invoke('verify-email-code', {
-        body: { email, code }
+        body: { email, code },
       });
-      
-      if (verifyError) {
-        return { error: verifyError };
-      }
-      
+      if (verifyError) return { error: verifyError };
       return { error: null };
     } catch (error) {
       return { error };
@@ -89,25 +112,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: `${window.location.origin}/`
-      }
+        redirectTo: `${window.location.origin}/onboarding`,
+      },
     });
     return { error };
   };
 
   const signOut = async () => {
     await supabase.auth.signOut();
+    setProfile(null);
   };
 
   const value = {
     user,
     session,
+    profile,
     loading,
     signIn,
     signUp,
     signInWithGoogle,
     signOut,
     verifyEmail,
+    refreshProfile,
   };
 
   return (
