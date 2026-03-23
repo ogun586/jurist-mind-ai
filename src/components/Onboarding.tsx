@@ -110,6 +110,7 @@ function Question({
 // ─── Main Onboarding Component ───────────────────────────────────────────────
 export function Onboarding() {
   const { user, profile, refreshProfile } = useAuth();
+
   const navigate = useNavigate();
   const { toast } = useToast();
 
