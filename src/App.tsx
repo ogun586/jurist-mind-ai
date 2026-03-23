@@ -32,12 +32,46 @@ import SharedChatView from "./pages/SharedChatView";
 
 const queryClient = new QueryClient();
 
+// ─── Loading Screen ────────────────────────────────────────────────────────
+function LoadingScreen() {
+  return (
+    <div
+      style={{
+        height: '100vh',
+        width: '100%',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: '#0a0a0c',
+        flexDirection: 'column',
+        gap: '1rem',
+      }}
+    >
+      <div
+        style={{
+          width: 32,
+          height: 32,
+          border: '3px solid rgba(201,168,76,0.15)',
+          borderTop: '3px solid #c9a84c',
+          borderRadius: '50%',
+          animation: 'goldSpin 0.75s linear infinite',
+        }}
+      />
+      <style>{`@keyframes goldSpin { to { transform: rotate(360deg); } }`}</style>
+      <p style={{ color: '#6b6b80', fontSize: '0.8rem', letterSpacing: '0.05em' }}>
+        Loading Jurist Mind…
+      </p>
+    </div>
+  );
+}
+
 // ─── Route Guards ──────────────────────────────────────────────────────────
 
 // Auth route: redirect if already logged in
 function AuthRoute() {
   const { user, profile, loading } = useAuth();
-  if (loading) return <LoadingScreen />;
+  // Wait for both auth AND profile to settle
+  if (loading || (user && profile === null)) return <LoadingScreen />;
   if (user && profile?.onboarding_completed) return <Navigate to="/" replace />;
   if (user && !profile?.onboarding_completed) return <Navigate to="/onboarding" replace />;
   return <ChatAuth />;
@@ -46,18 +80,18 @@ function AuthRoute() {
 // Onboarding route: only if logged in, not yet completed
 function OnboardingRoute() {
   const { user, profile, loading } = useAuth();
-  if (loading) return <LoadingScreen />;
+  if (loading || (user && profile === null)) return <LoadingScreen />;
   if (!user) return <Navigate to="/auth" replace />;
   if (profile?.onboarding_completed) return <Navigate to="/" replace />;
   return <Onboarding />;
 }
 
-// Protected route: full app with sidebar — requires auth + onboarding done
+// Protected layout: full app with sidebar — requires auth + onboarding done
 function ProtectedLayout() {
   const { user, profile, loading } = useAuth();
-  if (loading) return <LoadingScreen />;
+  if (loading || (user && profile === null)) return <LoadingScreen />;
   if (!user) return <Navigate to="/auth" replace />;
-  if (profile !== null && !profile?.onboarding_completed) return <Navigate to="/onboarding" replace />;
+  if (!profile?.onboarding_completed) return <Navigate to="/onboarding" replace />;
 
   return (
     <SidebarProvider>
@@ -88,18 +122,6 @@ function ProtectedLayout() {
         </div>
       </div>
     </SidebarProvider>
-  );
-}
-
-// Loading screen
-function LoadingScreen() {
-  return (
-    <div className="h-screen w-full flex items-center justify-center bg-background">
-      <div className="text-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto" />
-        <p className="mt-2 text-muted-foreground text-sm">Loading...</p>
-      </div>
-    </div>
   );
 }
 

@@ -34,7 +34,8 @@ export function ChatInterface() {
   const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
+  const userCountry = profile?.country || 'Nigeria';
   const { toast } = useToast();
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -210,6 +211,8 @@ export function ChatInterface() {
     try {
       const formData = new FormData();
       formData.append("question", messageContent);
+      formData.append("country", userCountry);
+      formData.append("system_context", `You are Jurist Mind, an AI-powered legal assistant. The user is based in ${userCountry}. Answer ALL legal questions strictly based on the laws, statutes, regulations, and legal framework of ${userCountry}. Always reference ${userCountry} law specifically. If the user asks about law from another country, you may answer but always clarify the distinction.`);
       if (sessionId) formData.append("chat_id", sessionId);
       if (user?.id) formData.append("user_id", user.id);
 
@@ -294,7 +297,15 @@ export function ChatInterface() {
     <div className="flex flex-col h-full chat-bg">
       {/* Header */}
       <div className="flex items-center justify-between px-6 py-3 border-b border-[rgba(255,255,255,0.06)] flex-shrink-0">
-        <h1 className="text-base font-semibold text-foreground tracking-tight">JURIST MIND</h1>
+        <div className="flex items-center gap-3">
+          <h1 className="text-base font-semibold text-foreground tracking-tight">JURIST MIND</h1>
+          {userCountry && (
+            <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-primary/20 bg-primary/5">
+              <span className="text-[10px]">⚖️</span>
+              <span className="text-[11px] font-medium text-primary/70">{userCountry} Law</span>
+            </div>
+          )}
+        </div>
         <div className="flex items-center gap-1">
           <ShareButton sessionId={currentSessionId} />
           <Button

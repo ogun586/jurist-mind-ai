@@ -110,6 +110,7 @@ function Question({
 // ─── Main Onboarding Component ───────────────────────────────────────────────
 export function Onboarding() {
   const { user, profile, refreshProfile } = useAuth();
+
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -275,14 +276,16 @@ export function Onboarding() {
       .update(updateData)
       .eq('user_id', user.id);
 
-    setSaving(false);
-
     if (error) {
+      setSaving(false);
       toast({ title: 'Something went wrong', description: error.message, variant: 'destructive' });
-    } else {
-      await refreshProfile();
-      navigate('/');
+      return;
     }
+
+    // CRITICAL: refresh profile in context BEFORE navigating so route guards see updated state
+    await refreshProfile(user.id);
+    setSaving(false);
+    navigate('/', { replace: true });
   };
 
   // ─── Render question content ──────────────────────────────────────────────
