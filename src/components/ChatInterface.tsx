@@ -34,7 +34,8 @@ export function ChatInterface() {
   const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
+  const userCountry = profile?.country || 'Nigeria';
   const { toast } = useToast();
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
