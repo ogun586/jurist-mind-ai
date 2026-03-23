@@ -297,8 +297,15 @@ export function ChatInterface() {
     <div className="flex flex-col h-full chat-bg">
       {/* Header */}
       <div className="flex items-center justify-between px-6 py-3 border-b border-[rgba(255,255,255,0.06)] flex-shrink-0">
-        <h1 className="text-base font-semibold text-foreground tracking-tight">JURIST MIND</h1>
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-3">
+          <h1 className="text-base font-semibold text-foreground tracking-tight">JURIST MIND</h1>
+          {userCountry && (
+            <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-primary/20 bg-primary/5">
+              <span className="text-[10px]">⚖️</span>
+              <span className="text-[11px] font-medium text-primary/70">{userCountry} Law</span>
+            </div>
+          )}
+        </div>
           <ShareButton sessionId={currentSessionId} />
           <Button
             onClick={handleNewChat}
