@@ -211,6 +211,8 @@ export function ChatInterface() {
     try {
       const formData = new FormData();
       formData.append("question", messageContent);
+      formData.append("country", userCountry);
+      formData.append("system_context", `You are Jurist Mind, an AI-powered legal assistant. The user is based in ${userCountry}. Answer ALL legal questions strictly based on the laws, statutes, regulations, and legal framework of ${userCountry}. Always reference ${userCountry} law specifically. If the user asks about law from another country, you may answer but always clarify the distinction.`);
       if (sessionId) formData.append("chat_id", sessionId);
       if (user?.id) formData.append("user_id", user.id);
 
