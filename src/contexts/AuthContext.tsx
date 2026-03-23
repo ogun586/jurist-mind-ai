@@ -12,7 +12,7 @@ interface AuthContextType {
   signInWithGoogle: () => Promise<{ error: any }>;
   signOut: () => Promise<void>;
   verifyEmail: (email: string, code: string) => Promise<{ error: any }>;
-  refreshProfile: () => Promise<void>;
+  refreshProfile: (userId?: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -23,7 +23,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [profile, setProfile] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // Fetch profile from DB
+  // Fetch & cache profile from DB
   const fetchProfile = async (userId: string) => {
     try {
       const { data } = await supabase
@@ -31,26 +31,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         .select('*')
         .eq('user_id', userId)
         .maybeSingle();
-      if (data) setProfile(data);
-      else setProfile(null);
+      setProfile(data ?? null);
     } catch {
       setProfile(null);
     }
   };
 
-  const refreshProfile = async () => {
-    if (user) await fetchProfile(user.id);
+  // Expose refreshProfile so Onboarding can force a re-fetch after saving
+  const refreshProfile = async (userId?: string) => {
+    const id = userId ?? user?.id;
+    if (id) await fetchProfile(id);
   };
 
   useEffect(() => {
-    // Set up auth state listener FIRST
+    // Auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
+      async (_event, session) => {
         setSession(session);
         setUser(session?.user ?? null);
         setLoading(false);
         if (session?.user) {
-          // Defer to avoid Supabase deadlock
+          // Defer to avoid Supabase internal deadlock
           setTimeout(() => fetchProfile(session.user.id), 0);
         } else {
           setProfile(null);
@@ -58,7 +59,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     );
 
-    // Check for existing session
+    // Hydrate on mount
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
