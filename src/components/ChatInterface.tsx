@@ -306,6 +306,7 @@ export function ChatInterface() {
             </div>
           )}
         </div>
+        <div className="flex items-center gap-1">
           <ShareButton sessionId={currentSessionId} />
           <Button
             onClick={handleNewChat}
