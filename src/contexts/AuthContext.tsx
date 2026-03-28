@@ -7,6 +7,7 @@ interface AuthContextType {
   session: Session | null;
   profile: any | null;
   loading: boolean;
+  profileLoading: boolean;
   signIn: (email: string, password: string) => Promise<{ error: any }>;
   signUp: (email: string, password: string, displayName?: string, phone?: string, userType?: string) => Promise<{ error: any; data?: any }>;
   signInWithGoogle: () => Promise<{ error: any }>;
@@ -22,9 +23,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
+  const [profileLoading, setProfileLoading] = useState(true);
 
-  // Fetch & cache profile from DB
   const fetchProfile = async (userId: string) => {
+    setProfileLoading(true);
     try {
       const { data } = await supabase
         .from('profiles')
@@ -34,10 +36,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setProfile(data ?? null);
     } catch {
       setProfile(null);
+    } finally {
+      setProfileLoading(false);
     }
   };
 
-  // Expose refreshProfile so Onboarding can force a re-fetch after saving
   const refreshProfile = async (userId?: string) => {
     const id = userId ?? user?.id;
     if (id) await fetchProfile(id);
@@ -46,7 +49,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     let mounted = true;
 
-    // Hydrate on mount FIRST
     supabase.auth.getSession()
       .then(({ data: { session } }) => {
         if (!mounted) return;
@@ -58,6 +60,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           });
         } else {
           setProfile(null);
+          setProfileLoading(false);
           setLoading(false);
         }
       })
@@ -66,10 +69,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setUser(null);
         setSession(null);
         setProfile(null);
+        setProfileLoading(false);
         setLoading(false);
       });
 
-    // Then listen for changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (_event, session) => {
         if (!mounted) return;
@@ -80,6 +83,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           fetchProfile(session.user.id);
         } else {
           setProfile(null);
+          setProfileLoading(false);
         }
       }
     );
@@ -90,10 +94,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
   }, []);
 
-  // Safety timeout — force exit loading after 5s no matter what
+  // Safety timeout
   useEffect(() => {
     const timeout = setTimeout(() => {
       setLoading(false);
+      setProfileLoading(false);
     }, 5000);
     return () => clearTimeout(timeout);
   }, []);
@@ -157,6 +162,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     session,
     profile,
     loading,
+    profileLoading,
     signIn,
     signUp,
     signInWithGoogle,
