@@ -109,6 +109,7 @@ function ProtectedLayout() {
               <Route path="/jtl" element={<JTL />} />
               <Route path="/juristlens" element={<JuristLens />} />
               <Route path="/history" element={<History />} />
+              <Route path="/recent" element={<Recent />} />
               <Route path="/upgrade" element={<Upgrade />} />
               <Route path="/profile" element={<Profile />} />
               <Route path="*" element={<NotFound />} />
