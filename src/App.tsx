@@ -3,15 +3,13 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate, useNavigate } from "react-router-dom";
-import { useEffect } from "react";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { JuristSidebar } from "@/components/JuristSidebar";
 import { TopHeader } from "@/components/TopHeader";
 import { ChatAuth } from "@/components/ChatAuth";
 import { Onboarding } from "@/components/Onboarding";
-import { supabase } from "@/integrations/supabase/client";
 import Index from "./pages/Index";
 import Search from "./pages/Search";
 import Cases from "./pages/Cases";
@@ -67,29 +65,25 @@ function LoadingScreen() {
 
 // ─── Route Guards ──────────────────────────────────────────────────────────
 
-// Auth route: redirect if already logged in
 function AuthRoute() {
-  const { user, profile, loading } = useAuth();
-  // Wait for both auth AND profile to settle
-  if (loading || (user && profile === null)) return <LoadingScreen />;
+  const { user, profile, loading, profileLoading } = useAuth();
+  if (loading || profileLoading) return <LoadingScreen />;
   if (user && profile?.onboarding_completed) return <Navigate to="/" replace />;
   if (user && !profile?.onboarding_completed) return <Navigate to="/onboarding" replace />;
   return <ChatAuth />;
 }
 
-// Onboarding route: only if logged in, not yet completed
 function OnboardingRoute() {
-  const { user, profile, loading } = useAuth();
-  if (loading || (user && profile === null)) return <LoadingScreen />;
+  const { user, profile, loading, profileLoading } = useAuth();
+  if (loading || profileLoading) return <LoadingScreen />;
   if (!user) return <Navigate to="/auth" replace />;
   if (profile?.onboarding_completed) return <Navigate to="/" replace />;
   return <Onboarding />;
 }
 
-// Protected layout: full app with sidebar — requires auth + onboarding done
 function ProtectedLayout() {
-  const { user, profile, loading } = useAuth();
-  if (loading || (user && profile === null)) return <LoadingScreen />;
+  const { user, profile, loading, profileLoading } = useAuth();
+  if (loading || profileLoading) return <LoadingScreen />;
   if (!user) return <Navigate to="/auth" replace />;
   if (!profile?.onboarding_completed) return <Navigate to="/onboarding" replace />;
 
@@ -125,34 +119,6 @@ function ProtectedLayout() {
   );
 }
 
-// OAuth redirect handler
-function OAuthHandler() {
-  const navigate = useNavigate();
-
-  useEffect(() => {
-    const { data: listener } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        if (event === 'SIGNED_IN' && session) {
-          const { data: prof } = await supabase
-            .from('profiles')
-            .select('onboarding_completed')
-            .eq('user_id', session.user.id)
-            .maybeSingle();
-
-          if (prof?.onboarding_completed) {
-            navigate('/', { replace: true });
-          } else {
-            navigate('/onboarding', { replace: true });
-          }
-        }
-      }
-    );
-    return () => listener.subscription.unsubscribe();
-  }, [navigate]);
-
-  return null;
-}
-
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <AuthProvider>
@@ -160,7 +126,6 @@ const App = () => (
         <Toaster />
         <Sonner />
         <BrowserRouter>
-          <OAuthHandler />
           <Routes>
             {/* Public routes */}
             <Route path="/auth" element={<AuthRoute />} />
