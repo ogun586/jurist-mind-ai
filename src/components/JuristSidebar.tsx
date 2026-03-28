@@ -13,6 +13,7 @@ import {
   Plus,
   Clock,
   Scale,
+  MessagesSquare,
   ScanSearch,
   Crown,
   ChevronDown,
@@ -40,6 +41,7 @@ const navigationItems = [
   { title: "Diary",                url: "/diary",       icon: CalendarDays },
   { title: "Cases",                url: "/cases",       icon: FolderOpen },
   { title: "Connect with Lawyers", url: "/lawyers",     icon: Gem },
+  { title: "All Chats",            url: "/recent",     icon: MessagesSquare },
 ];
 
 const bottomItems = [

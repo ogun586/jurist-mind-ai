@@ -26,6 +26,7 @@ import Upgrade from "./pages/Upgrade";
 import NotFound from "./pages/NotFound";
 import Terms from "./pages/Terms";
 import Profile from "./pages/Profile";
+import Recent from "./pages/Recent";
 import SharedChatView from "./pages/SharedChatView";
 
 const queryClient = new QueryClient();
@@ -108,6 +109,7 @@ function ProtectedLayout() {
               <Route path="/jtl" element={<JTL />} />
               <Route path="/juristlens" element={<JuristLens />} />
               <Route path="/history" element={<History />} />
+              <Route path="/recent" element={<Recent />} />
               <Route path="/upgrade" element={<Upgrade />} />
               <Route path="/profile" element={<Profile />} />
               <Route path="*" element={<NotFound />} />
