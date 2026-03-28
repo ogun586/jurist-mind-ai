@@ -13,6 +13,7 @@ import {
   Plus,
   Clock,
   Scale,
+  MessagesSquare,
   ScanSearch,
   Crown,
   ChevronDown,
