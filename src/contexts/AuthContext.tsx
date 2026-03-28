@@ -44,14 +44,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   useEffect(() => {
-    // Auth state listener
+    let mounted = true;
+
+    // Hydrate on mount FIRST
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!mounted) return;
+      setSession(session);
+      setUser(session?.user ?? null);
+      if (session?.user) {
+        fetchProfile(session.user.id).finally(() => {
+          if (mounted) setLoading(false);
+        });
+      } else {
+        setProfile(null);
+        setLoading(false);
+      }
+    });
+
+    // Then listen for changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (_event, session) => {
+        if (!mounted) return;
         setSession(session);
         setUser(session?.user ?? null);
-        setLoading(false);
         if (session?.user) {
-          // Defer to avoid Supabase internal deadlock
           setTimeout(() => fetchProfile(session.user.id), 0);
         } else {
           setProfile(null);
@@ -59,15 +75,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     );
 
-    // Hydrate on mount
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      setLoading(false);
-      if (session?.user) fetchProfile(session.user.id);
-    });
-
-    return () => subscription.unsubscribe();
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
   const signIn = async (email: string, password: string) => {
