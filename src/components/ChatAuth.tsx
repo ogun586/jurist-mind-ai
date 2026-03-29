@@ -5,10 +5,12 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2 } from 'lucide-react';
+import { Loader2, ArrowLeft, Mail } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
+import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp';
 import PhoneInput from 'react-phone-number-input';
 import 'react-phone-number-input/style.css';
+import { supabase } from '@/integrations/supabase/client';
 
 export function ChatAuth() {
   const [isLogin, setIsLogin] = useState(true);
@@ -20,7 +22,13 @@ export function ChatAuth() {
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
 
-  const { user, profile, signIn, signUp, signInWithGoogle } = useAuth();
+  // Verification state
+  const [showVerification, setShowVerification] = useState(false);
+  const [verificationCode, setVerificationCode] = useState('');
+  const [verifying, setVerifying] = useState(false);
+  const [resending, setResending] = useState(false);
+
+  const { user, profile, signIn, signInWithGoogle } = useAuth();
   const { toast } = useToast();
 
   // Redirect based on onboarding state
@@ -28,6 +36,17 @@ export function ChatAuth() {
     if (profile?.onboarding_completed) return <Navigate to="/" replace />;
     return <Navigate to="/onboarding" replace />;
   }
+
+  const sendVerificationCode = async () => {
+    const { data, error } = await supabase.functions.invoke('send-verification-code', {
+      body: {
+        email,
+        userData: { email, password, displayName, phone, userType },
+      },
+    });
+    if (error) throw new Error(error.message || 'Failed to send verification code');
+    if (data?.error) throw new Error(data.error);
+  };
 
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -40,20 +59,70 @@ export function ChatAuth() {
           toast({ title: 'Sign In Error', description: error.message, variant: 'destructive' });
         }
       } else {
-        const { error } = await signUp(email, password, displayName, phone, userType);
-        if (error) {
-          toast({ title: 'Sign Up Error', description: error.message, variant: 'destructive' });
-        } else {
-          toast({
-            title: 'Account Created!',
-            description: 'Welcome to Jurist Mind. Let\'s set up your profile.',
-          });
-        }
+        // Send verification code instead of creating user directly
+        await sendVerificationCode();
+        setShowVerification(true);
+        toast({
+          title: 'Verification Code Sent',
+          description: `We've sent a 6-digit code to ${email}. Check your inbox.`,
+        });
       }
-    } catch {
-      toast({ title: 'Error', description: 'An unexpected error occurred.', variant: 'destructive' });
+    } catch (err: any) {
+      toast({ title: 'Error', description: err.message || 'An unexpected error occurred.', variant: 'destructive' });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleVerifyCode = async () => {
+    if (verificationCode.length !== 6) return;
+    setVerifying(true);
+
+    try {
+      const { data, error } = await supabase.functions.invoke('verify-email-code', {
+        body: { email, code: verificationCode },
+      });
+
+      if (error || data?.error) {
+        toast({
+          title: 'Verification Failed',
+          description: data?.error || error?.message || 'Invalid or expired code. Please try again.',
+          variant: 'destructive',
+        });
+        setVerifying(false);
+        return;
+      }
+
+      toast({ title: 'Email Verified!', description: 'Welcome to Jurist Mind. Setting up your account...' });
+
+      // Auto sign-in after successful verification
+      const { error: signInError } = await signIn(email, password);
+      if (signInError) {
+        toast({
+          title: 'Sign In Error',
+          description: 'Account created but auto sign-in failed. Please sign in manually.',
+          variant: 'destructive',
+        });
+        setShowVerification(false);
+        setIsLogin(true);
+      }
+      // AuthContext will handle redirect to /onboarding
+    } catch (err: any) {
+      toast({ title: 'Error', description: err.message || 'Verification failed.', variant: 'destructive' });
+    } finally {
+      setVerifying(false);
+    }
+  };
+
+  const handleResendCode = async () => {
+    setResending(true);
+    try {
+      await sendVerificationCode();
+      toast({ title: 'Code Resent', description: `A new code has been sent to ${email}.` });
+    } catch (err: any) {
+      toast({ title: 'Error', description: err.message || 'Failed to resend code.', variant: 'destructive' });
+    } finally {
+      setResending(false);
     }
   };
 
@@ -71,6 +140,87 @@ export function ChatAuth() {
     }
   };
 
+  // ─── Verification Code Screen ────────────────────────────────────
+  if (showVerification) {
+    return (
+      <div className="min-h-screen bg-background flex flex-col">
+        <div className="flex-1 flex items-center justify-center p-6">
+          <div className="w-full max-w-md space-y-8">
+            <div className="text-center">
+              <div className="mx-auto w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-6">
+                <Mail className="h-8 w-8 text-primary" />
+              </div>
+              <h1 className="text-2xl font-bold text-foreground mb-2">Check your email</h1>
+              <p className="text-muted-foreground text-sm">
+                We sent a 6-digit verification code to
+              </p>
+              <p className="text-foreground font-medium text-sm mt-1">{email}</p>
+            </div>
+
+            <div className="flex justify-center">
+              <InputOTP
+                maxLength={6}
+                value={verificationCode}
+                onChange={setVerificationCode}
+              >
+                <InputOTPGroup>
+                  <InputOTPSlot index={0} className="w-12 h-14 text-lg border-border" />
+                  <InputOTPSlot index={1} className="w-12 h-14 text-lg border-border" />
+                  <InputOTPSlot index={2} className="w-12 h-14 text-lg border-border" />
+                  <InputOTPSlot index={3} className="w-12 h-14 text-lg border-border" />
+                  <InputOTPSlot index={4} className="w-12 h-14 text-lg border-border" />
+                  <InputOTPSlot index={5} className="w-12 h-14 text-lg border-border" />
+                </InputOTPGroup>
+              </InputOTP>
+            </div>
+
+            <Button
+              onClick={handleVerifyCode}
+              disabled={verificationCode.length !== 6 || verifying}
+              className="w-full bg-primary text-primary-foreground hover:bg-primary/90 h-12 rounded-xl font-semibold"
+            >
+              {verifying ? (
+                <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Verifying...</>
+              ) : (
+                'Verify & Continue'
+              )}
+            </Button>
+
+            <div className="text-center space-y-3">
+              <p className="text-muted-foreground text-sm">
+                Didn't receive the code?{' '}
+                <Button
+                  variant="link"
+                  onClick={handleResendCode}
+                  disabled={resending}
+                  className="text-primary p-0 h-auto font-medium"
+                >
+                  {resending ? 'Resending...' : 'Resend code'}
+                </Button>
+              </p>
+              <Button
+                variant="ghost"
+                onClick={() => {
+                  setShowVerification(false);
+                  setVerificationCode('');
+                }}
+                className="text-muted-foreground hover:text-foreground text-sm"
+              >
+                <ArrowLeft className="mr-1 h-4 w-4" />
+                Back to sign up
+              </Button>
+            </div>
+
+            <p className="text-center text-muted-foreground text-xs">
+              The code expires in 10 minutes.
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ─── Login / Signup Form ─────────────────────────────────────────
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <div className="flex-1 flex items-center justify-center p-6">
@@ -163,7 +313,7 @@ export function ChatAuth() {
               disabled={loading || (!isLogin && (!displayName || !email || !password))}
             >
               {loading ? (
-                <><Loader2 className="mr-2 h-4 w-4 animate-spin" />{isLogin ? 'Signing in...' : 'Creating account...'}</>
+                <><Loader2 className="mr-2 h-4 w-4 animate-spin" />{isLogin ? 'Signing in...' : 'Sending verification code...'}</>
               ) : (
                 isLogin ? 'Sign In' : 'Create Account'
               )}
