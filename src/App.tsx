@@ -28,6 +28,7 @@ import Terms from "./pages/Terms";
 import Profile from "./pages/Profile";
 import Recent from "./pages/Recent";
 import SharedChatView from "./pages/SharedChatView";
+import Admin from "./pages/Admin";
 
 const queryClient = new QueryClient();
 
