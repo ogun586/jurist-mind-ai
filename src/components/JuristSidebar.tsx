@@ -18,6 +18,7 @@ import {
   Crown,
   ChevronDown,
   ChevronRight,
+  Shield,
 } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 import {
@@ -29,6 +30,7 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import { ChatHistory } from "@/components/ChatHistory";
+import { useAuth } from "@/contexts/AuthContext";
 
 const navigationItems = [
   { title: "Search",               url: "/search",      icon: Search },
@@ -54,6 +56,7 @@ export function JuristSidebar() {
   const { state } = useSidebar();
   const location  = useLocation();
   const navigate  = useNavigate();
+  const { profile } = useAuth();
   const currentPath = location.pathname;
   const collapsed   = state === "collapsed";
   const [showHistory, setShowHistory] = useState(false);
@@ -138,6 +141,28 @@ export function JuristSidebar() {
                 </SidebarMenuItem>
               );
             })}
+            {(profile?.role === 'admin' || profile?.role === 'super_admin') && (
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild>
+                  <button
+                    onClick={() => navigate('/admin')}
+                    className={`flex items-center gap-3 w-full text-left rounded-lg transition-all duration-150 relative ${
+                      collapsed ? "px-2 py-2.5 justify-center" : "px-3 py-2.5"
+                    } ${
+                      isActive('/admin')
+                        ? "text-primary bg-primary/8"
+                        : "text-muted-foreground hover:text-foreground hover:bg-[rgba(255,255,255,0.04)]"
+                    }`}
+                  >
+                    <Shield
+                      className={`flex-shrink-0 ${collapsed ? "w-5 h-5" : "w-4 h-4"} ${isActive('/admin') ? "text-primary" : ""}`}
+                      strokeWidth={isActive('/admin') ? 2.2 : 1.8}
+                    />
+                    {!collapsed && <span className="text-[13.5px] font-medium">Admin Panel</span>}
+                  </button>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            )}
           </SidebarMenu>
         </div>
 

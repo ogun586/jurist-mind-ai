@@ -49,47 +49,79 @@ export type Database = {
       cases: {
         Row: {
           case_number: string | null
+          case_tags: string[] | null
           case_type: string
+          citation: string | null
           client_name: string
+          country_id: string | null
+          court_name: string | null
           created_at: string | null
+          date_decided: string | null
           description: string | null
+          full_text: string | null
           id: string
+          is_published: boolean | null
           next_hearing: string | null
           priority: string | null
           status: string | null
+          summary: string | null
           title: string
           updated_at: string | null
           user_id: string
         }
         Insert: {
           case_number?: string | null
+          case_tags?: string[] | null
           case_type: string
+          citation?: string | null
           client_name: string
+          country_id?: string | null
+          court_name?: string | null
           created_at?: string | null
+          date_decided?: string | null
           description?: string | null
+          full_text?: string | null
           id?: string
+          is_published?: boolean | null
           next_hearing?: string | null
           priority?: string | null
           status?: string | null
+          summary?: string | null
           title: string
           updated_at?: string | null
           user_id: string
         }
         Update: {
           case_number?: string | null
+          case_tags?: string[] | null
           case_type?: string
+          citation?: string | null
           client_name?: string
+          country_id?: string | null
+          court_name?: string | null
           created_at?: string | null
+          date_decided?: string | null
           description?: string | null
+          full_text?: string | null
           id?: string
+          is_published?: boolean | null
           next_hearing?: string | null
           priority?: string | null
           status?: string | null
+          summary?: string | null
           title?: string
           updated_at?: string | null
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "cases_country_id_fkey"
+            columns: ["country_id"]
+            isOneToOne: false
+            referencedRelation: "countries"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       chat_feedback: {
         Row: {
@@ -179,6 +211,30 @@ export type Database = {
           title?: string
           updated_at?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      countries: {
+        Row: {
+          code: string
+          created_at: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+        }
+        Insert: {
+          code: string
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+        }
+        Update: {
+          code?: string
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
         }
         Relationships: []
       }
@@ -535,11 +591,14 @@ export type Database = {
           applications_count: number | null
           benefits: string | null
           company: string
+          country_id: string | null
           created_at: string | null
           deadline: string | null
           description: string
           experience_level: string | null
           id: string
+          is_active: boolean | null
+          is_remote: boolean | null
           job_type: string
           location: string
           posted_by: string
@@ -552,11 +611,14 @@ export type Database = {
           applications_count?: number | null
           benefits?: string | null
           company: string
+          country_id?: string | null
           created_at?: string | null
           deadline?: string | null
           description: string
           experience_level?: string | null
           id?: string
+          is_active?: boolean | null
+          is_remote?: boolean | null
           job_type: string
           location: string
           posted_by: string
@@ -569,11 +631,14 @@ export type Database = {
           applications_count?: number | null
           benefits?: string | null
           company?: string
+          country_id?: string | null
           created_at?: string | null
           deadline?: string | null
           description?: string
           experience_level?: string | null
           id?: string
+          is_active?: boolean | null
+          is_remote?: boolean | null
           job_type?: string
           location?: string
           posted_by?: string
@@ -582,7 +647,15 @@ export type Database = {
           title?: string
           updated_at?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "jobs_country_id_fkey"
+            columns: ["country_id"]
+            isOneToOne: false
+            referencedRelation: "countries"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       judge_notes: {
         Row: {
@@ -709,6 +782,41 @@ export type Database = {
         }
         Relationships: []
       }
+      lawyer_contact_requests: {
+        Row: {
+          created_at: string | null
+          id: string
+          lawyer_id: string
+          message: string
+          requester_id: string
+          status: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          lawyer_id: string
+          message: string
+          requester_id: string
+          status?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          lawyer_id?: string
+          message?: string
+          requester_id?: string
+          status?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lawyer_contact_requests_lawyer_id_fkey"
+            columns: ["lawyer_id"]
+            isOneToOne: false
+            referencedRelation: "lawyers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       lawyer_credentials: {
         Row: {
           created_at: string | null
@@ -812,13 +920,16 @@ export type Database = {
           brand_accent_color: string | null
           city: string | null
           country: string | null
+          country_id_ref: string | null
           created_at: string | null
           description: string | null
           email: string
           firm_logo_url: string | null
           firm_name: string | null
+          hourly_rate: number | null
           id: string
           intro_video_url: string | null
+          is_available: boolean | null
           location: string | null
           name: string
           phone: string | null
@@ -849,13 +960,16 @@ export type Database = {
           brand_accent_color?: string | null
           city?: string | null
           country?: string | null
+          country_id_ref?: string | null
           created_at?: string | null
           description?: string | null
           email: string
           firm_logo_url?: string | null
           firm_name?: string | null
+          hourly_rate?: number | null
           id?: string
           intro_video_url?: string | null
+          is_available?: boolean | null
           location?: string | null
           name: string
           phone?: string | null
@@ -886,13 +1000,16 @@ export type Database = {
           brand_accent_color?: string | null
           city?: string | null
           country?: string | null
+          country_id_ref?: string | null
           created_at?: string | null
           description?: string | null
           email?: string
           firm_logo_url?: string | null
           firm_name?: string | null
+          hourly_rate?: number | null
           id?: string
           intro_video_url?: string | null
+          is_available?: boolean | null
           location?: string | null
           name?: string
           phone?: string | null
@@ -915,7 +1032,15 @@ export type Database = {
           website?: string | null
           years_experience?: number | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "lawyers_country_id_ref_fkey"
+            columns: ["country_id_ref"]
+            isOneToOne: false
+            referencedRelation: "countries"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       notifications: {
         Row: {
@@ -1168,6 +1293,7 @@ export type Database = {
           plan_expires_at: string | null
           plan_key: string | null
           plan_started_at: string | null
+          role: string | null
           school_country: string | null
           school_name: string | null
           updated_at: string
@@ -1191,6 +1317,7 @@ export type Database = {
           plan_expires_at?: string | null
           plan_key?: string | null
           plan_started_at?: string | null
+          role?: string | null
           school_country?: string | null
           school_name?: string | null
           updated_at?: string
@@ -1214,6 +1341,7 @@ export type Database = {
           plan_expires_at?: string | null
           plan_key?: string | null
           plan_started_at?: string | null
+          role?: string | null
           school_country?: string | null
           school_name?: string | null
           updated_at?: string

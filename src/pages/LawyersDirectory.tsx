@@ -1,319 +1,379 @@
 import { useState, useEffect } from "react";
-import { Search, Filter, MapPin, Users, Sparkles, TrendingUp } from "lucide-react";
-import { Input } from "@/components/ui/input";
+import { Users, Search, Globe, MapPin, Star, Send, Check, Loader2, Shield, Briefcase } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { 
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue 
-} from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
+import { useCountryId, useAllCountries } from "@/hooks/useCountryId";
 import { toast } from "sonner";
-import { LawyerCard, RegisterLawyerDialog } from "@/components/lawyers";
 
-interface Lawyer {
+interface LawyerRow {
   id: string;
-  name: string;
-  email: string;
-  phone?: string;
-  state: string;
-  city?: string;
-  firm_name?: string;
-  firm_logo_url?: string;
-  avatar_url?: string;
-  brand_accent_color?: string;
-  description?: string;
+  user_id: string;
   specialization: string[];
   years_experience: number;
-  rating: number;
-  total_ratings: number;
-  verification_status?: string;
-  availability_status?: string;
-  slug?: string;
-  profile_views?: number;
+  description: string | null;
+  city: string | null;
+  verified: boolean;
+  is_available: boolean;
+  hourly_rate: number | null;
+  bar_number: string | null;
+  name: string;
+  country_id_ref: string;
 }
 
 export default function LawyersDirectory() {
-  const [lawyers, setLawyers] = useState<Lawyer[]>([]);
-  const [filteredLawyers, setFilteredLawyers] = useState<Lawyer[]>([]);
-  const [states, setStates] = useState<string[]>([]);
-  const [specializations, setSpecializations] = useState<string[]>([]);
+  const { user, profile } = useAuth();
+  const userCountry = profile?.country;
+  const { countryId } = useCountryId();
+  const { countries } = useAllCountries();
+
+  const [lawyers, setLawyers] = useState<LawyerRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedCountryId, setSelectedCountryId] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedState, setSelectedState] = useState("all");
-  const [selectedSpecialization, setSelectedSpecialization] = useState("all");
-  const [showFilters, setShowFilters] = useState(false);
+  const [selectedSpec, setSelectedSpec] = useState<string | null>(null);
+  const [connectingLawyer, setConnectingLawyer] = useState<LawyerRow | null>(null);
+  const [connectMessage, setConnectMessage] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [sentRequests, setSentRequests] = useState<Set<string>>(new Set());
+
+  // Lawyer registration state
+  const [showRegister, setShowRegister] = useState(false);
+  const [hasProfile, setHasProfile] = useState<boolean | null>(null);
+  const [regBarNumber, setRegBarNumber] = useState("");
+  const [regSpecs, setRegSpecs] = useState("");
+  const [regYears, setRegYears] = useState("");
+  const [regBio, setRegBio] = useState("");
+  const [regRate, setRegRate] = useState("");
+  const [regCity, setRegCity] = useState("");
+  const [regAvailable, setRegAvailable] = useState(true);
+  const [registering, setRegistering] = useState(false);
 
   useEffect(() => {
-    fetchLawyers();
-    fetchStates();
-    fetchSpecializations();
-  }, []);
-
-  const fetchLawyers = async () => {
-    try {
-      const { data, error } = await supabase.functions.invoke('search-lawyers', {
-        body: { action: 'get-all' }
-      });
-
-      if (error) throw error;
-      setLawyers(data || []);
-      setFilteredLawyers(data || []);
-    } catch (error) {
-      console.error('Error fetching lawyers:', error);
-      toast.error('Failed to fetch lawyers');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const fetchStates = async () => {
-    try {
-      const { data, error } = await supabase.functions.invoke('search-lawyers', {
-        body: { action: 'get-states' }
-      });
-
-      if (error) throw error;
-      setStates(data || []);
-    } catch (error) {
-      console.error('Error fetching states:', error);
-    }
-  };
-
-  const fetchSpecializations = async () => {
-    try {
-      const { data, error } = await supabase.functions.invoke('search-lawyers', {
-        body: { action: 'get-specializations' }
-      });
-
-      if (error) throw error;
-      setSpecializations(data || []);
-    } catch (error) {
-      console.error('Error fetching specializations:', error);
-    }
-  };
+    if (countryId && !selectedCountryId) setSelectedCountryId(countryId);
+  }, [countryId]);
 
   useEffect(() => {
-    let filtered = lawyers;
+    if (selectedCountryId) fetchLawyers(selectedCountryId);
+  }, [selectedCountryId]);
 
-    if (searchTerm) {
-      const term = searchTerm.toLowerCase();
-      filtered = filtered.filter(lawyer => 
-        lawyer.name.toLowerCase().includes(term) ||
-        lawyer.firm_name?.toLowerCase().includes(term) ||
-        lawyer.specialization.some(spec => spec.toLowerCase().includes(term))
-      );
+  useEffect(() => {
+    if (user) {
+      fetchSentRequests();
+      checkLawyerProfile();
     }
+  }, [user]);
 
-    if (selectedState && selectedState !== "all") {
-      filtered = filtered.filter(lawyer => lawyer.state === selectedState);
-    }
-
-    if (selectedSpecialization && selectedSpecialization !== "all") {
-      filtered = filtered.filter(lawyer => 
-        lawyer.specialization.includes(selectedSpecialization)
-      );
-    }
-
-    setFilteredLawyers(filtered);
-  }, [searchTerm, selectedState, selectedSpecialization, lawyers]);
-
-  const onlineLawyers = filteredLawyers.filter(l => l.availability_status === 'online').length;
-  const topRated = filteredLawyers.filter(l => l.rating >= 4.5).length;
-
-  if (loading) {
+  if (!userCountry) {
     return (
-      <div className="h-full bg-background overflow-y-auto">
-        <div className="max-w-7xl mx-auto p-6">
-          {/* Header Skeleton */}
-          <div className="mb-8">
-            <Skeleton className="h-10 w-80 mb-2" />
-            <Skeleton className="h-5 w-96" />
-          </div>
-          {/* Grid Skeleton */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {[...Array(6)].map((_, i) => (
-              <Skeleton key={i} className="h-72 rounded-xl" />
-            ))}
-          </div>
+      <div className="flex items-center justify-center h-full">
+        <div className="flex items-center gap-3 text-muted-foreground">
+          <Loader2 className="w-5 h-5 animate-spin text-primary" />
+          <p>Loading your profile…</p>
         </div>
       </div>
     );
   }
 
+  async function fetchLawyers(cId: string) {
+    setLoading(true);
+    try {
+      const { data, error } = await (supabase.from as any)("lawyers")
+        .select("id, user_id, specialization, years_experience, description, city, verified, is_available, hourly_rate, bar_number, name, country_id_ref")
+        .eq("country_id_ref", cId)
+        .eq("verified", true)
+        .eq("is_available", true);
+      if (error) throw error;
+      setLawyers(data || []);
+    } catch (e: any) {
+      console.error(e);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function fetchSentRequests() {
+    if (!user) return;
+    try {
+      const { data } = await (supabase.from as any)("lawyer_contact_requests")
+        .select("lawyer_id")
+        .eq("requester_id", user.id);
+      if (data) setSentRequests(new Set(data.map((d: any) => d.lawyer_id)));
+    } catch {}
+  }
+
+  async function checkLawyerProfile() {
+    if (!user) return;
+    try {
+      const { data } = await supabase.from("lawyers").select("id").eq("user_id", user.id).maybeSingle();
+      setHasProfile(!!data);
+    } catch { setHasProfile(false); }
+  }
+
+  async function handleConnect() {
+    if (!connectingLawyer || !user || !connectMessage.trim()) {
+      toast.error("Please write a message");
+      return;
+    }
+    setSubmitting(true);
+    try {
+      const { error } = await (supabase.from as any)("lawyer_contact_requests").insert({
+        lawyer_id: connectingLawyer.id,
+        requester_id: user.id,
+        message: connectMessage,
+      });
+      if (error) throw error;
+      setSentRequests((prev) => new Set([...prev, connectingLawyer.id]));
+      toast.success("Request sent!");
+      setConnectingLawyer(null);
+      setConnectMessage("");
+    } catch (e: any) {
+      toast.error(e.message?.includes("unique") ? "Request already sent" : "Failed to send request");
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  async function handleRegister() {
+    if (!user || !countryId) return;
+    if (!regBio.trim()) { toast.error("Please provide a bio"); return; }
+    setRegistering(true);
+    try {
+      const specs = regSpecs.split(",").map((s) => s.trim()).filter(Boolean);
+      const { error } = await (supabase.from as any)("lawyers").insert({
+        user_id: user.id,
+        name: profile?.full_name || profile?.display_name || "Unnamed",
+        email: profile?.email || "",
+        state: userCountry,
+        country_id_ref: countryId,
+        bar_number: regBarNumber || null,
+        specialization: specs,
+        years_experience: parseInt(regYears) || 0,
+        description: regBio,
+        hourly_rate: regRate ? parseFloat(regRate) : null,
+        city: regCity || null,
+        is_available: regAvailable,
+      });
+      if (error) throw error;
+      toast.success("Profile submitted for verification!");
+      setShowRegister(false);
+      setHasProfile(true);
+    } catch (e: any) {
+      toast.error(e.message || "Failed to register");
+    } finally {
+      setRegistering(false);
+    }
+  }
+
+  const allSpecs = [...new Set(lawyers.flatMap((l) => l.specialization || []))].sort();
+
+  const filtered = lawyers.filter((l) => {
+    const matchSearch = !searchTerm || l.name.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchSpec = !selectedSpec || (l.specialization || []).includes(selectedSpec);
+    return matchSearch && matchSpec;
+  });
+
   return (
     <div className="h-full bg-background overflow-y-auto">
-      <div className="max-w-7xl mx-auto p-6">
-        {/* Hero Header */}
-        <div className="relative mb-8 p-8 rounded-2xl bg-gradient-to-br from-primary/10 via-primary/5 to-background border border-primary/10 overflow-hidden">
-          <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
-          
-          <div className="relative z-10">
-            <div className="flex items-center gap-2 mb-3">
-              <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
-                <Users className="w-5 h-5 text-primary" />
-              </div>
-              <Badge variant="secondary" className="text-xs">
-                <Sparkles className="w-3 h-3 mr-1" />
-                Trusted Legal Professionals
-              </Badge>
-            </div>
-            
-            <h1 className="text-3xl md:text-4xl font-bold text-foreground mb-2">
-              Connect with a Lawyer
-            </h1>
-            <p className="text-muted-foreground text-lg max-w-2xl">
-              Discover verified legal professionals across Nigeria. Build lasting professional relationships with trusted lawyers.
-            </p>
-
-            {/* Stats */}
-            <div className="flex flex-wrap gap-6 mt-6">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center">
-                  <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
-                </div>
+      <div className="max-w-5xl mx-auto p-6">
+        {/* Lawyer Registration Banner */}
+        {profile?.user_type?.toLowerCase() === "lawyer" && hasProfile === false && (
+          <div className="mb-6 p-4 rounded-xl border border-primary/20 bg-primary/5">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <Shield className="w-5 h-5 text-primary" />
                 <div>
-                  <p className="text-sm font-medium text-foreground">{onlineLawyers} Online</p>
-                  <p className="text-xs text-muted-foreground">Available now</p>
+                  <p className="text-sm font-medium text-foreground">
+                    You are registered as a lawyer. Complete your profile to appear in the directory.
+                  </p>
                 </div>
               </div>
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-lg bg-amber-500/10 flex items-center justify-center">
-                  <TrendingUp className="w-4 h-4 text-amber-500" />
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-foreground">{topRated} Top Rated</p>
-                  <p className="text-xs text-muted-foreground">4.5+ stars</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
-                  <MapPin className="w-4 h-4 text-primary" />
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-foreground">{states.length} States</p>
-                  <p className="text-xs text-muted-foreground">Nationwide coverage</p>
-                </div>
-              </div>
+              <Button size="sm" onClick={() => setShowRegister(true)}>Complete Profile</Button>
             </div>
-          </div>
-        </div>
-
-        {/* Search & Filters */}
-        <div className="sticky top-0 z-20 bg-background/95 backdrop-blur-sm pb-4 mb-6">
-          <div className="flex flex-col md:flex-row gap-4">
-            {/* Search Input */}
-            <div className="relative flex-1">
-              <Search className="w-5 h-5 absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground" />
-              <Input 
-                placeholder="Search by name, firm, or practice area..." 
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-12 h-12 text-base"
-              />
-            </div>
-
-            {/* Filter Toggle & Register */}
-            <div className="flex gap-3">
-              <Button
-                variant="outline"
-                className="h-12 px-4"
-                onClick={() => setShowFilters(!showFilters)}
-              >
-                <Filter className="w-4 h-4 mr-2" />
-                Filters
-                {(selectedState !== 'all' || selectedSpecialization !== 'all') && (
-                  <Badge className="ml-2 h-5 w-5 p-0 flex items-center justify-center text-xs">
-                    {(selectedState !== 'all' ? 1 : 0) + (selectedSpecialization !== 'all' ? 1 : 0)}
-                  </Badge>
-                )}
-              </Button>
-              <RegisterLawyerDialog onLawyerAdded={fetchLawyers} />
-            </div>
-          </div>
-
-          {/* Expandable Filters */}
-          {showFilters && (
-            <div className="flex flex-wrap gap-4 mt-4 p-4 bg-muted/30 rounded-xl border animate-in slide-in-from-top-2">
-              <Select value={selectedState} onValueChange={setSelectedState}>
-                <SelectTrigger className="w-48 h-10">
-                  <MapPin className="w-4 h-4 mr-2 text-muted-foreground" />
-                  <SelectValue placeholder="All States" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All States</SelectItem>
-                  {states.map(state => (
-                    <SelectItem key={state} value={state}>{state}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-
-              <Select value={selectedSpecialization} onValueChange={setSelectedSpecialization}>
-                <SelectTrigger className="w-56 h-10">
-                  <SelectValue placeholder="All Specializations" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Specializations</SelectItem>
-                  {specializations.map(spec => (
-                    <SelectItem key={spec} value={spec}>{spec}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-
-              {(selectedState !== 'all' || selectedSpecialization !== 'all') && (
-                <Button 
-                  variant="ghost" 
-                  size="sm"
-                  onClick={() => {
-                    setSelectedState('all');
-                    setSelectedSpecialization('all');
-                  }}
-                  className="text-muted-foreground"
-                >
-                  Clear filters
-                </Button>
-              )}
-            </div>
-          )}
-        </div>
-
-        {/* Results Count */}
-        <div className="flex items-center justify-between mb-6">
-          <p className="text-muted-foreground">
-            <span className="font-semibold text-foreground">{filteredLawyers.length}</span> lawyers found
-          </p>
-        </div>
-
-        {/* Lawyers Grid */}
-        {filteredLawyers.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredLawyers.map((lawyer) => (
-              <LawyerCard key={lawyer.id} lawyer={lawyer} />
-            ))}
-          </div>
-        ) : (
-          <div className="text-center py-16">
-            <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-muted flex items-center justify-center">
-              <Users className="w-8 h-8 text-muted-foreground" />
-            </div>
-            <h3 className="text-lg font-semibold text-foreground mb-2">
-              No lawyers found
-            </h3>
-            <p className="text-muted-foreground max-w-md mx-auto mb-6">
-              We couldn't find any lawyers matching your criteria. Try adjusting your filters or search term.
-            </p>
-            <Button 
-              variant="outline"
-              onClick={() => {
-                setSearchTerm('');
-                setSelectedState('all');
-                setSelectedSpecialization('all');
-              }}
-            >
-              Clear all filters
-            </Button>
           </div>
         )}
+
+        {/* Header */}
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
+              <Users className="w-6 h-6 text-primary" />
+              Lawyers Directory
+            </h1>
+            <p className="text-muted-foreground text-sm mt-1">Connect with verified legal professionals</p>
+          </div>
+          <Select value={selectedCountryId || ""} onValueChange={(v) => setSelectedCountryId(v)}>
+            <SelectTrigger className="w-52">
+              <Globe className="w-4 h-4 mr-2 text-muted-foreground" />
+              <SelectValue placeholder="Select country" />
+            </SelectTrigger>
+            <SelectContent className="max-h-60">
+              {countries.map((c) => (
+                <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        {/* Search */}
+        <div className="relative mb-4">
+          <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+          <Input placeholder="Search lawyers..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-10" />
+        </div>
+
+        {/* Spec Filters */}
+        {allSpecs.length > 0 && (
+          <div className="flex flex-wrap gap-2 mb-6">
+            {selectedSpec && (
+              <Badge variant="outline" className="cursor-pointer bg-primary/10 text-primary" onClick={() => setSelectedSpec(null)}>
+                {selectedSpec} ✕
+              </Badge>
+            )}
+            {allSpecs.filter((s) => s !== selectedSpec).slice(0, 10).map((s) => (
+              <Badge key={s} variant="outline" className="cursor-pointer hover:bg-primary/5" onClick={() => setSelectedSpec(s)}>
+                {s}
+              </Badge>
+            ))}
+          </div>
+        )}
+
+        {/* Lawyers List */}
+        {loading ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {[...Array(4)].map((_, i) => <Skeleton key={i} className="h-48 rounded-xl" />)}
+          </div>
+        ) : filtered.length === 0 ? (
+          <div className="text-center py-16">
+            <Users className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
+            <h3 className="text-lg font-semibold text-foreground mb-1">No verified lawyers</h3>
+            <p className="text-muted-foreground text-sm">
+              No verified lawyers listed in {countries.find((c) => c.id === selectedCountryId)?.name || "this country"} yet.
+            </p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {filtered.map((lawyer) => (
+              <div key={lawyer.id} className="p-5 rounded-xl border border-border/50 bg-card hover:border-primary/20 transition-colors">
+                <div className="flex items-start justify-between">
+                  <div>
+                    <h3 className="font-semibold text-foreground">{lawyer.name}</h3>
+                    {lawyer.city && (
+                      <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
+                        <MapPin className="w-3 h-3" /> {lawyer.city}
+                      </p>
+                    )}
+                  </div>
+                  <Badge variant="outline" className="bg-emerald-500/10 text-emerald-400 border-emerald-500/20 text-xs">
+                    <Shield className="w-3 h-3 mr-1" /> Verified
+                  </Badge>
+                </div>
+
+                {lawyer.specialization?.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5 mt-3">
+                    {lawyer.specialization.slice(0, 3).map((s) => (
+                      <Badge key={s} variant="secondary" className="text-xs">{s}</Badge>
+                    ))}
+                  </div>
+                )}
+
+                <div className="flex items-center gap-4 mt-3 text-xs text-muted-foreground">
+                  {lawyer.years_experience > 0 && (
+                    <span className="flex items-center gap-1">
+                      <Briefcase className="w-3 h-3" /> {lawyer.years_experience} yrs
+                    </span>
+                  )}
+                  {lawyer.hourly_rate && <span>₦{lawyer.hourly_rate.toLocaleString()}/hr</span>}
+                </div>
+
+                {lawyer.description && (
+                  <p className="text-sm text-muted-foreground mt-2 line-clamp-2">{lawyer.description}</p>
+                )}
+
+                <div className="mt-4">
+                  {sentRequests.has(lawyer.id) ? (
+                    <Button variant="outline" size="sm" disabled>
+                      <Check className="w-4 h-4 mr-1" /> Request Sent
+                    </Button>
+                  ) : (
+                    <Button size="sm" onClick={() => setConnectingLawyer(lawyer)}>
+                      <Send className="w-4 h-4 mr-1" /> Connect
+                    </Button>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Connect Dialog */}
+        <Dialog open={!!connectingLawyer} onOpenChange={(o) => !o && setConnectingLawyer(null)}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Connect with {connectingLawyer?.name}</DialogTitle>
+            </DialogHeader>
+            <Textarea
+              placeholder="Write a message..."
+              value={connectMessage}
+              onChange={(e) => setConnectMessage(e.target.value)}
+              className="min-h-[100px]"
+            />
+            <Button onClick={handleConnect} disabled={submitting}>
+              {submitting ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Send className="w-4 h-4 mr-2" />}
+              Send Request
+            </Button>
+          </DialogContent>
+        </Dialog>
+
+        {/* Register Dialog */}
+        <Dialog open={showRegister} onOpenChange={setShowRegister}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Complete Your Lawyer Profile</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-3 max-h-[60vh] overflow-y-auto pr-2">
+              <div>
+                <Label>Bar Number</Label>
+                <Input value={regBarNumber} onChange={(e) => setRegBarNumber(e.target.value)} placeholder="e.g. SCN/12345" className="mt-1" />
+              </div>
+              <div>
+                <Label>Specializations (comma-separated)</Label>
+                <Input value={regSpecs} onChange={(e) => setRegSpecs(e.target.value)} placeholder="e.g. Criminal Law, Corporate Law" className="mt-1" />
+              </div>
+              <div>
+                <Label>Years of Experience</Label>
+                <Input type="number" value={regYears} onChange={(e) => setRegYears(e.target.value)} placeholder="e.g. 5" className="mt-1" />
+              </div>
+              <div>
+                <Label>Bio *</Label>
+                <Textarea value={regBio} onChange={(e) => setRegBio(e.target.value)} placeholder="Tell clients about yourself..." className="mt-1" />
+              </div>
+              <div>
+                <Label>Hourly Rate (₦)</Label>
+                <Input type="number" value={regRate} onChange={(e) => setRegRate(e.target.value)} placeholder="e.g. 50000" className="mt-1" />
+              </div>
+              <div>
+                <Label>City</Label>
+                <Input value={regCity} onChange={(e) => setRegCity(e.target.value)} placeholder="e.g. Lagos" className="mt-1" />
+              </div>
+              <div className="flex items-center gap-3">
+                <Switch checked={regAvailable} onCheckedChange={setRegAvailable} />
+                <Label>Available for hire</Label>
+              </div>
+            </div>
+            <Button onClick={handleRegister} disabled={registering} className="w-full mt-2">
+              {registering ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+              Submit for Verification
+            </Button>
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );

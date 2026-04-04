@@ -28,6 +28,7 @@ import Terms from "./pages/Terms";
 import Profile from "./pages/Profile";
 import Recent from "./pages/Recent";
 import SharedChatView from "./pages/SharedChatView";
+import Admin from "./pages/Admin";
 
 const queryClient = new QueryClient();
 
@@ -80,6 +81,28 @@ function OnboardingRoute() {
   if (!user) return <Navigate to="/auth" replace />;
   if (profile?.onboarding_completed) return <Navigate to="/" replace />;
   return <Onboarding />;
+}
+
+function AdminRoute() {
+  const { user, profile, loading, profileLoading } = useAuth();
+  if (loading || profileLoading) return <LoadingScreen />;
+  if (!user) return <Navigate to="/auth" replace />;
+  if (!profile || !['admin', 'super_admin'].includes(profile.role || '')) {
+    return <Navigate to="/" replace />;
+  }
+  return (
+    <SidebarProvider>
+      <div className="flex h-screen w-full bg-background">
+        <JuristSidebar />
+        <div className="flex-1 flex flex-col overflow-hidden">
+          <TopHeader />
+          <main className="flex-1 overflow-hidden">
+            <Admin />
+          </main>
+        </div>
+      </div>
+    </SidebarProvider>
+  );
 }
 
 function ProtectedLayout() {
@@ -136,6 +159,7 @@ const App = () => (
             <Route path="/onboarding" element={<OnboardingRoute />} />
 
             {/* All protected routes via layout */}
+            <Route path="/admin" element={<AdminRoute />} />
             <Route path="/*" element={<ProtectedLayout />} />
           </Routes>
         </BrowserRouter>
