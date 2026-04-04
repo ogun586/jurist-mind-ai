@@ -140,6 +140,28 @@ export function JuristSidebar() {
                 </SidebarMenuItem>
               );
             })}
+            {(profile?.role === 'admin' || profile?.role === 'super_admin') && (
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild>
+                  <button
+                    onClick={() => navigate('/admin')}
+                    className={`flex items-center gap-3 w-full text-left rounded-lg transition-all duration-150 relative ${
+                      collapsed ? "px-2 py-2.5 justify-center" : "px-3 py-2.5"
+                    } ${
+                      isActive('/admin')
+                        ? "text-primary bg-primary/8"
+                        : "text-muted-foreground hover:text-foreground hover:bg-[rgba(255,255,255,0.04)]"
+                    }`}
+                  >
+                    <Shield
+                      className={`flex-shrink-0 ${collapsed ? "w-5 h-5" : "w-4 h-4"} ${isActive('/admin') ? "text-primary" : ""}`}
+                      strokeWidth={isActive('/admin') ? 2.2 : 1.8}
+                    />
+                    {!collapsed && <span className="text-[13.5px] font-medium">Admin Panel</span>}
+                  </button>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            )}
           </SidebarMenu>
         </div>
 
