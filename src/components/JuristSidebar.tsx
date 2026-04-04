@@ -18,6 +18,7 @@ import {
   Crown,
   ChevronDown,
   ChevronRight,
+  Shield,
 } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 import {
