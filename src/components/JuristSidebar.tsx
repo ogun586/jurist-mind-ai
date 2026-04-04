@@ -29,6 +29,7 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import { ChatHistory } from "@/components/ChatHistory";
+import { useAuth } from "@/contexts/AuthContext";
 
 const navigationItems = [
   { title: "Search",               url: "/search",      icon: Search },
