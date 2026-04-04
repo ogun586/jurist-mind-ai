@@ -55,6 +55,7 @@ export function JuristSidebar() {
   const { state } = useSidebar();
   const location  = useLocation();
   const navigate  = useNavigate();
+  const { profile } = useAuth();
   const currentPath = location.pathname;
   const collapsed   = state === "collapsed";
   const [showHistory, setShowHistory] = useState(false);
