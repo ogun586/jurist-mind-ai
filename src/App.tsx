@@ -137,6 +137,7 @@ const App = () => (
             <Route path="/onboarding" element={<OnboardingRoute />} />
 
             {/* All protected routes via layout */}
+            <Route path="/admin" element={<AdminRoute />} />
             <Route path="/*" element={<ProtectedLayout />} />
           </Routes>
         </BrowserRouter>
