@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Send, Mic, Paperclip, Copy, Check, RotateCcw, ThumbsUp, ThumbsDown, Scale, Plus } from "lucide-react";
 import { ShareButton } from "@/components/ShareButton";
 import { Button } from "@/components/ui/button";
@@ -39,6 +39,7 @@ export function ChatInterface() {
   const { toast } = useToast();
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const workerRef = useRef<Worker | null>(null);
   const { sessionId: urlSessionId } = useParams<{ sessionId: string }>();
   const navigate = useNavigate();
 
@@ -47,6 +48,37 @@ export function ChatInterface() {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
+
+  // Web Worker for background streaming
+  useEffect(() => {
+    workerRef.current = new Worker(
+      new URL('../workers/streamWorker.ts', import.meta.url),
+      { type: 'module' }
+    );
+    return () => workerRef.current?.terminate();
+  }, []);
+
+  // Page Visibility API — scroll to bottom when tab becomes visible
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        setTimeout(() => {
+          messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+        }, 100);
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, []);
+
+  // Clean up orphaned stream cache
+  useEffect(() => {
+    if (!currentSessionId) {
+      Object.keys(sessionStorage)
+        .filter(k => k.startsWith('stream_'))
+        .forEach(k => sessionStorage.removeItem(k));
+    }
+  }, [currentSessionId]);
 
   useEffect(() => {
     if (!user) return;
