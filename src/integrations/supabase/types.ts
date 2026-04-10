@@ -663,9 +663,11 @@ export type Database = {
           case_suit_number: string | null
           category: string
           content: string
+          country_id: string | null
           court: string
           created_at: string
           id: string
+          is_published: boolean | null
           judge_name: string
           tags: string[] | null
           title: string
@@ -676,9 +678,11 @@ export type Database = {
           case_suit_number?: string | null
           category: string
           content: string
+          country_id?: string | null
           court: string
           created_at?: string
           id?: string
+          is_published?: boolean | null
           judge_name: string
           tags?: string[] | null
           title: string
@@ -689,15 +693,25 @@ export type Database = {
           case_suit_number?: string | null
           category?: string
           content?: string
+          country_id?: string | null
           court?: string
           created_at?: string
           id?: string
+          is_published?: boolean | null
           judge_name?: string
           tags?: string[] | null
           title?: string
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "judge_notes_country_id_fkey"
+            columns: ["country_id"]
+            isOneToOne: false
+            referencedRelation: "countries"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       juristlens_messages: {
         Row: {

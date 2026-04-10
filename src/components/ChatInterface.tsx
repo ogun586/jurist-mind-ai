@@ -39,6 +39,7 @@ export function ChatInterface() {
   const { toast } = useToast();
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const workerRef = useRef<Worker | null>(null);
   const { sessionId: urlSessionId } = useParams<{ sessionId: string }>();
   const navigate = useNavigate();
 
@@ -47,6 +48,37 @@ export function ChatInterface() {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
+
+  // Web Worker for background streaming
+  useEffect(() => {
+    workerRef.current = new Worker(
+      new URL('../workers/streamWorker.ts', import.meta.url),
+      { type: 'module' }
+    );
+    return () => workerRef.current?.terminate();
+  }, []);
+
+  // Page Visibility API — scroll to bottom when tab becomes visible
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        setTimeout(() => {
+          messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+        }, 100);
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, []);
+
+  // Clean up orphaned stream cache
+  useEffect(() => {
+    if (!currentSessionId) {
+      Object.keys(sessionStorage)
+        .filter(k => k.startsWith('stream_'))
+        .forEach(k => sessionStorage.removeItem(k));
+    }
+  }, [currentSessionId]);
 
   useEffect(() => {
     if (!user) return;
@@ -216,36 +248,47 @@ export function ChatInterface() {
       if (sessionId) formData.append("chat_id", sessionId);
       if (user?.id) formData.append("user_id", user.id);
 
-      const response = await fetch("https://juristmind.onrender.com/ask", { method: "POST", body: formData });
-      if (!response.ok) throw new Error("Failed to get AI response");
-      if (!response.body) throw new Error("No response body");
-
-      const reader = response.body.getReader();
-      const decoder = new TextDecoder();
       let fullContent = "";
-      let done = false;
 
-      while (!done) {
-        const { value, done: doneReading } = await reader.read();
-        done = doneReading;
-        if (value) {
-          const chunk = decoder.decode(value, { stream: true });
-          for (const line of chunk.split("\n\n")) {
-            if (!line.startsWith("data:")) continue;
-            const dataStr = line.slice(5).trim();
-            if (dataStr === "[DONE]") { done = true; break; }
-            try {
-              const data = JSON.parse(dataStr);
-              if (data.content) {
-                fullContent += data.content;
-                setMessages((prev) => prev.map((msg) => msg.id === aiTempId ? { ...msg, content: fullContent } : msg));
-              }
-            } catch { }
+      await new Promise<void>((resolve, reject) => {
+        const worker = workerRef.current;
+        if (!worker) { reject(new Error('No worker')); return; }
+
+        worker.onmessage = (e) => {
+          const { type, data, message } = e.data;
+          if (type === 'chunk') {
+            for (const line of data.split('\n\n')) {
+              if (!line.startsWith('data:')) continue;
+              const dataStr = line.slice(5).trim();
+              if (dataStr === '[DONE]') return;
+              try {
+                const parsed = JSON.parse(dataStr);
+                if (parsed.content) {
+                  fullContent += parsed.content;
+                  sessionStorage.setItem(`stream_${aiTempId}`, fullContent);
+                  setMessages((prev) =>
+                    prev.map((msg) =>
+                      msg.id === aiTempId ? { ...msg, content: fullContent } : msg
+                    )
+                  );
+                }
+              } catch {}
+            }
+          } else if (type === 'done') {
+            resolve();
+          } else if (type === 'error') {
+            reject(new Error(message));
           }
-        }
-      }
+        };
+
+        worker.postMessage({
+          url: 'https://juristmind.onrender.com/ask',
+          body: formData,
+        });
+      });
 
       if (fullContent) {
+        sessionStorage.removeItem(`stream_${aiTempId}`);
         const aiDbId = await saveMessage(sessionId, fullContent, "ai");
         if (aiDbId) setMessages((prev) => prev.map((msg) => msg.id === aiTempId ? { ...msg, db_id: aiDbId } : msg));
       }

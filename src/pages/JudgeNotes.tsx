@@ -8,6 +8,7 @@ import {
   BookOpen,
   Loader2,
   ArrowRight,
+  Globe,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -24,6 +25,7 @@ import { toast } from "sonner";
 import { AddNoteDialog } from "@/components/AddNoteDialog";
 import { ReadFullNote } from "@/components/ReadFullNote";
 import { LegalCaseCard } from "@/components/cases";
+import { useCountryId, useAllCountries } from "@/hooks/useCountryId";
 
 interface JudgeNote {
   id: string;
@@ -40,6 +42,10 @@ interface JudgeNote {
 }
 
 export default function JudgeNotes() {
+  const { countryId, loading: countryLoading, countryName } = useCountryId();
+  const { countries: allCountries } = useAllCountries();
+  const [selectedCountryId, setSelectedCountryId] = useState<string | null>(null);
+
   const [notes, setNotes] = useState<JudgeNote[]>([]);
   const [filteredNotes, setFilteredNotes] = useState<JudgeNote[]>([]);
   const [loading, setLoading] = useState(true);
@@ -50,29 +56,37 @@ export default function JudgeNotes() {
   const [selectedNoteId, setSelectedNoteId] = useState<string>("");
   const [readNoteOpen, setReadNoteOpen] = useState(false);
 
+  const activeCountryId = selectedCountryId || countryId;
+
   // Get unique categories and courts for filters
   const categories = [...new Set(notes.map((n) => n.category))].filter(Boolean);
   const courts = [...new Set(notes.map((n) => n.court))].filter(Boolean);
 
   useEffect(() => {
-    fetchNotes();
-  }, []);
+    if (countryId && !selectedCountryId) {
+      setSelectedCountryId(countryId);
+    }
+  }, [countryId]);
+
+  useEffect(() => {
+    if (activeCountryId) fetchNotes();
+  }, [activeCountryId]);
 
   useEffect(() => {
     handleSearch();
   }, [searchTerm, notes, categoryFilter, courtFilter, statusFilter]);
 
   const fetchNotes = async () => {
+    if (!activeCountryId) return;
+    setLoading(true);
     try {
-      const { data, error } = await supabase.functions.invoke(
-        "manage-judge-notes",
-        {
-          body: { action: "list" },
-        }
-      );
+      const { data, error } = await (supabase.from as any)("judge_notes")
+        .select("*")
+        .eq("country_id", activeCountryId)
+        .eq("is_published", true)
+        .order("created_at", { ascending: false });
 
       if (error) throw error;
-      // Simulate some notes having CTC and verified status for demo
       const enrichedNotes = (data || []).map((note: JudgeNote, index: number) => ({
         ...note,
         has_ctc: index % 3 === 0,
@@ -128,7 +142,19 @@ export default function JudgeNotes() {
   const verifiedCount = notes.filter((n) => n.status === "verified").length;
   const pendingCount = notes.filter((n) => n.status === "pending").length;
 
-  if (loading) {
+  const currentCountryName = selectedCountryId
+    ? allCountries.find((c) => c.id === selectedCountryId)?.name || countryName
+    : countryName;
+
+  if (countryLoading || !countryId) {
+    return (
+      <div className="flex items-center justify-center h-full">
+        <p className="text-muted-foreground text-sm">Loading your profile…</p>
+      </div>
+    );
+  }
+
+  if (loading && notes.length === 0) {
     return (
       <div className="h-full bg-background flex items-center justify-center">
         <div className="text-center animate-fade-in">
@@ -148,25 +174,42 @@ export default function JudgeNotes() {
       <div className="max-w-5xl mx-auto p-6 md:p-8 lg:p-10">
         {/* Header Section - Clean, Institutional */}
         <div className="mb-10 animate-fade-in">
-          {/* Main Title */}
-          <h1 className="font-legal-serif text-3xl md:text-4xl font-bold text-foreground mb-3 tracking-tight">
-            Latest Cases Report
-          </h1>
+          <div className="flex items-start justify-between">
+            <div>
+              {/* Main Title */}
+              <h1 className="font-legal-serif text-3xl md:text-4xl font-bold text-foreground mb-3 tracking-tight">
+                Latest Cases Report
+              </h1>
 
-          {/* Description */}
-          <p className="text-muted-foreground text-base max-w-2xl font-legal-body leading-relaxed mb-6">
-            Access instant case reports from lawyers directly from the courtroom. 
-            View and download Certified True Copies (CTC) of judgments with complete 
-            authenticity verification.
-          </p>
+              {/* Description */}
+              <p className="text-muted-foreground text-base max-w-2xl font-legal-body leading-relaxed mb-6">
+                Access instant case reports from lawyers directly from the courtroom. 
+                View and download Certified True Copies (CTC) of judgments with complete 
+                authenticity verification.
+              </p>
 
-          {/* Primary Action */}
-          <Button 
-            className="bg-[hsl(350,45%,35%)] hover:bg-[hsl(350,45%,28%)] text-white font-medium px-6 h-11 rounded-lg transition-colors duration-200"
-          >
-            View Verified Cases
-            <ArrowRight className="w-4 h-4 ml-2" />
-          </Button>
+              {/* Primary Action */}
+              <Button 
+                className="bg-[hsl(350,45%,35%)] hover:bg-[hsl(350,45%,28%)] text-white font-medium px-6 h-11 rounded-lg transition-colors duration-200"
+              >
+                View Verified Cases
+                <ArrowRight className="w-4 h-4 ml-2" />
+              </Button>
+            </div>
+
+            {/* Country Switcher */}
+            <Select value={selectedCountryId || ""} onValueChange={(v) => setSelectedCountryId(v)}>
+              <SelectTrigger className="w-[180px] h-10 bg-background border-border">
+                <Globe className="w-3.5 h-3.5 mr-2 text-muted-foreground" />
+                <SelectValue placeholder="Select country" />
+              </SelectTrigger>
+              <SelectContent className="max-h-60">
+                {allCountries.map((c) => (
+                  <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
 
         {/* Stats Row - Subtle, Professional */}
@@ -353,7 +396,7 @@ export default function JudgeNotes() {
             <span className="font-medium text-foreground">
               {filteredNotes.length}
             </span>{" "}
-            of {notes.length} reports
+            of {notes.length} reports in {currentCountryName}
           </p>
         </div>
 
@@ -383,7 +426,7 @@ export default function JudgeNotes() {
                 courtFilter !== "all" ||
                 statusFilter !== "all"
                   ? "No matching reports"
-                  : "No case reports yet"}
+                  : `No case reports in ${currentCountryName} yet`}
               </h3>
               <p className="text-muted-foreground text-sm mb-6 max-w-md mx-auto font-legal-body">
                 {searchTerm ||

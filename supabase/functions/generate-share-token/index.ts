@@ -57,7 +57,7 @@ serve(async (req) => {
       .eq("user_id", user.id).eq("is_active", true).maybeSingle();
 
     if (existingShare) {
-      const shareUrl = `https://id-preview--0d70bb92-b01d-4689-9ded-f9bffa9b8aa3.lovable.app/share/${existingShare.share_token}`;
+      const shareUrl = `https://chat.juristmind.com/share/${existingShare.share_token}`;
       return new Response(JSON.stringify({ success: true, share_token: existingShare.share_token, share_url: shareUrl }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -81,7 +81,7 @@ serve(async (req) => {
 
     await supabase.from("chat_sessions").update({ is_shared: true }).eq("id", chat_session_id);
 
-    const shareUrl = `https://id-preview--0d70bb92-b01d-4689-9ded-f9bffa9b8aa3.lovable.app/share/${shareToken}`;
+    const shareUrl = `https://chat.juristmind.com/share/${shareToken}`;
     return new Response(JSON.stringify({ success: true, share_token: shareToken, share_url: shareUrl }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });

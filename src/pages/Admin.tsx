@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Shield, Scale, Users, Globe, Plus, Check, X, Loader2, Pencil, Trash2, Eye, EyeOff } from "lucide-react";
+import { Shield, Scale, Users, Globe, Plus, Check, X, Loader2, Pencil, Trash2, Eye, EyeOff, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -51,6 +51,19 @@ interface Country {
   is_active: boolean;
 }
 
+interface AdminJudgeNote {
+  id: string;
+  title: string;
+  judge_name: string;
+  court: string;
+  category: string;
+  content: string;
+  tags: string[];
+  country_id: string | null;
+  is_published: boolean;
+  created_at: string;
+}
+
 export default function Admin() {
   const { user } = useAuth();
   const { countries: allCountries } = useAllCountries();
@@ -66,6 +79,16 @@ export default function Admin() {
   });
   const [savingCase, setSavingCase] = useState(false);
 
+  // Judge Notes state
+  const [judgeNotes, setJudgeNotes] = useState<AdminJudgeNote[]>([]);
+  const [judgeNotesLoading, setJudgeNotesLoading] = useState(true);
+  const [showNoteForm, setShowNoteForm] = useState(false);
+  const [editingNote, setEditingNote] = useState<AdminJudgeNote | null>(null);
+  const [noteForm, setNoteForm] = useState({
+    title: "", judge_name: "", court: "", category: "", content: "", tags: "", country_id: "", is_published: false,
+  });
+  const [savingNote, setSavingNote] = useState(false);
+
   // Lawyers state
   const [pendingLawyers, setPendingLawyers] = useState<AdminLawyer[]>([]);
   const [verifiedLawyers, setVerifiedLawyers] = useState<AdminLawyer[]>([]);
@@ -79,6 +102,7 @@ export default function Admin() {
     fetchCases();
     fetchLawyers();
     fetchCountries();
+    fetchJudgeNotes();
   }, []);
 
   // ─── Cases ──────────────────────────
@@ -168,6 +192,91 @@ export default function Admin() {
     } catch { toast.error("Failed to delete"); }
   }
 
+  // ─── Judge Notes ──────────────────────────
+  async function fetchJudgeNotes() {
+    setJudgeNotesLoading(true);
+    try {
+      const { data, error } = await (supabase.from as any)("judge_notes")
+        .select("id, title, judge_name, court, category, content, tags, country_id, is_published, created_at")
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      setJudgeNotes(data || []);
+    } catch (e: any) {
+      console.error(e);
+    } finally {
+      setJudgeNotesLoading(false);
+    }
+  }
+
+  function openNewNote() {
+    setEditingNote(null);
+    setNoteForm({ title: "", judge_name: "", court: "", category: "", content: "", tags: "", country_id: "", is_published: false });
+    setShowNoteForm(true);
+  }
+
+  function openEditNote(n: AdminJudgeNote) {
+    setEditingNote(n);
+    setNoteForm({
+      title: n.title, judge_name: n.judge_name || "", court: n.court || "",
+      category: n.category || "", content: n.content || "",
+      tags: (n.tags || []).join(", "), country_id: n.country_id || "", is_published: n.is_published,
+    });
+    setShowNoteForm(true);
+  }
+
+  async function saveNote() {
+    if (!user || !noteForm.title || !noteForm.country_id) {
+      toast.error("Title and Country are required");
+      return;
+    }
+    setSavingNote(true);
+    const payload = {
+      title: noteForm.title,
+      judge_name: noteForm.judge_name || "Unknown",
+      court: noteForm.court || "Unknown",
+      category: noteForm.category || "General",
+      content: noteForm.content || "",
+      tags: noteForm.tags.split(",").map((t) => t.trim()).filter(Boolean),
+      is_published: noteForm.is_published,
+      country_id: noteForm.country_id,
+    };
+    try {
+      if (editingNote) {
+        const { error } = await (supabase.from as any)("judge_notes").update(payload).eq("id", editingNote.id);
+        if (error) throw error;
+        toast.success("Judge note updated");
+      } else {
+        const { error } = await (supabase.from as any)("judge_notes").insert({ ...payload, author_id: user.id });
+        if (error) throw error;
+        toast.success("Judge note created");
+      }
+      setShowNoteForm(false);
+      fetchJudgeNotes();
+    } catch (e: any) {
+      toast.error(e.message || "Failed to save judge note");
+    } finally {
+      setSavingNote(false);
+    }
+  }
+
+  async function toggleNotePublish(n: AdminJudgeNote) {
+    try {
+      const { error } = await (supabase.from as any)("judge_notes").update({ is_published: !n.is_published }).eq("id", n.id);
+      if (error) throw error;
+      setJudgeNotes((prev) => prev.map((x) => x.id === n.id ? { ...x, is_published: !x.is_published } : x));
+      toast.success(n.is_published ? "Unpublished" : "Published");
+    } catch { toast.error("Failed to update"); }
+  }
+
+  async function deleteNote(id: string) {
+    try {
+      const { error } = await (supabase.from as any)("judge_notes").delete().eq("id", id);
+      if (error) throw error;
+      setJudgeNotes((prev) => prev.filter((n) => n.id !== id));
+      toast.success("Judge note deleted");
+    } catch { toast.error("Failed to delete"); }
+  }
+
   // ─── Lawyers ──────────────────────────
   async function fetchLawyers() {
     setLawyersLoading(true);
@@ -234,7 +343,10 @@ export default function Admin() {
     } catch { toast.error("Failed to update"); }
   }
 
-  const getCountryName = (id: string) => allCountries.find((c) => c.id === id)?.name || countriesList.find((c) => c.id === id)?.name || "—";
+  const getCountryName = (id: string | null) => {
+    if (!id) return "—";
+    return allCountries.find((c) => c.id === id)?.name || countriesList.find((c) => c.id === id)?.name || "—";
+  };
 
   return (
     <div className="h-full bg-background overflow-y-auto">
@@ -245,13 +357,14 @@ export default function Admin() {
           </div>
           <div>
             <h1 className="text-2xl font-bold text-foreground">Admin Panel</h1>
-            <p className="text-muted-foreground text-sm">Manage cases, lawyers, and countries</p>
+            <p className="text-muted-foreground text-sm">Manage cases, judge notes, lawyers, and countries</p>
           </div>
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList className="mb-6">
             <TabsTrigger value="cases"><Scale className="w-4 h-4 mr-1" /> Cases</TabsTrigger>
+            <TabsTrigger value="judge-notes"><FileText className="w-4 h-4 mr-1" /> Judge Notes</TabsTrigger>
             <TabsTrigger value="lawyers"><Users className="w-4 h-4 mr-1" /> Lawyers</TabsTrigger>
             <TabsTrigger value="countries"><Globe className="w-4 h-4 mr-1" /> Countries</TabsTrigger>
           </TabsList>
@@ -309,6 +422,74 @@ export default function Admin() {
                                 <AlertDialogFooter>
                                   <AlertDialogCancel>Cancel</AlertDialogCancel>
                                   <AlertDialogAction onClick={() => deleteCase(c.id)}>Delete</AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
+          </TabsContent>
+
+          {/* ─── Judge Notes Tab ─── */}
+          <TabsContent value="judge-notes">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-lg font-semibold text-foreground">All Judge Notes ({judgeNotes.length})</h2>
+              <Button onClick={openNewNote} size="sm"><Plus className="w-4 h-4 mr-1" /> New Judge Note</Button>
+            </div>
+            {judgeNotesLoading ? (
+              <p className="text-muted-foreground text-sm">Loading…</p>
+            ) : (
+              <div className="border rounded-xl overflow-hidden">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Title</TableHead>
+                      <TableHead>Country</TableHead>
+                      <TableHead>Court</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Date</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {judgeNotes.map((n) => (
+                      <TableRow key={n.id}>
+                        <TableCell className="font-medium max-w-[200px] truncate">{n.title}</TableCell>
+                        <TableCell className="text-sm">{getCountryName(n.country_id)}</TableCell>
+                        <TableCell className="text-sm">{n.court || "—"}</TableCell>
+                        <TableCell>
+                          <Badge variant={n.is_published ? "default" : "secondary"} className="text-xs">
+                            {n.is_published ? "Published" : "Draft"}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-sm">{n.created_at ? format(new Date(n.created_at), "MMM d, yyyy") : "—"}</TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex items-center justify-end gap-1">
+                            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEditNote(n)}>
+                              <Pencil className="w-3.5 h-3.5" />
+                            </Button>
+                            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => toggleNotePublish(n)}>
+                              {n.is_published ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                            </Button>
+                            <AlertDialog>
+                              <AlertDialogTrigger asChild>
+                                <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive">
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </Button>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent>
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>Delete judge note?</AlertDialogTitle>
+                                  <AlertDialogDescription>This action cannot be undone.</AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                  <AlertDialogAction onClick={() => deleteNote(n.id)}>Delete</AlertDialogAction>
                                 </AlertDialogFooter>
                               </AlertDialogContent>
                             </AlertDialog>
@@ -467,6 +648,58 @@ export default function Admin() {
             <Button onClick={saveCase} disabled={savingCase} className="w-full mt-2">
               {savingCase ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
               {editingCase ? "Update Case" : "Create Case"}
+            </Button>
+          </DialogContent>
+        </Dialog>
+
+        {/* ─── Judge Note Form Dialog ─── */}
+        <Dialog open={showNoteForm} onOpenChange={setShowNoteForm}>
+          <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>{editingNote ? "Edit Judge Note" : "New Judge Note"}</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-3">
+              <div>
+                <Label>Country *</Label>
+                <Select value={noteForm.country_id} onValueChange={(v) => setNoteForm({ ...noteForm, country_id: v })}>
+                  <SelectTrigger className="mt-1"><SelectValue placeholder="Select country" /></SelectTrigger>
+                  <SelectContent className="max-h-60">
+                    {allCountries.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label>Title *</Label>
+                <Input value={noteForm.title} onChange={(e) => setNoteForm({ ...noteForm, title: e.target.value })} className="mt-1" />
+              </div>
+              <div>
+                <Label>Judge Name</Label>
+                <Input value={noteForm.judge_name} onChange={(e) => setNoteForm({ ...noteForm, judge_name: e.target.value })} className="mt-1" />
+              </div>
+              <div>
+                <Label>Court</Label>
+                <Input value={noteForm.court} onChange={(e) => setNoteForm({ ...noteForm, court: e.target.value })} className="mt-1" />
+              </div>
+              <div>
+                <Label>Category</Label>
+                <Input value={noteForm.category} onChange={(e) => setNoteForm({ ...noteForm, category: e.target.value })} placeholder="e.g. Criminal, Civil, Constitutional" className="mt-1" />
+              </div>
+              <div>
+                <Label>Content</Label>
+                <Textarea value={noteForm.content} onChange={(e) => setNoteForm({ ...noteForm, content: e.target.value })} className="mt-1 min-h-[160px]" />
+              </div>
+              <div>
+                <Label>Tags (comma-separated)</Label>
+                <Input value={noteForm.tags} onChange={(e) => setNoteForm({ ...noteForm, tags: e.target.value })} placeholder="e.g. Landmark, Appeal" className="mt-1" />
+              </div>
+              <div className="flex items-center gap-3">
+                <Switch checked={noteForm.is_published} onCheckedChange={(v) => setNoteForm({ ...noteForm, is_published: v })} />
+                <Label>Publish immediately</Label>
+              </div>
+            </div>
+            <Button onClick={saveNote} disabled={savingNote} className="w-full mt-2">
+              {savingNote ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+              {editingNote ? "Update Judge Note" : "Create Judge Note"}
             </Button>
           </DialogContent>
         </Dialog>
