@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { Send, Mic, Paperclip, Copy, Check, RotateCcw, ThumbsUp, ThumbsDown, Scale, Plus } from "lucide-react";
 import { ShareButton } from "@/components/ShareButton";
 import { Button } from "@/components/ui/button";
