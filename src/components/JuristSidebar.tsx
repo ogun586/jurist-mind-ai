@@ -35,15 +35,14 @@ import { useAuth } from "@/contexts/AuthContext";
 const navigationItems = [
   { title: "Search",               url: "/search",      icon: Search },
   { title: "Chat",                 url: "/",            icon: MessageSquare },
-  { title: "JTL",                  url: "/jtl",         icon: Scale },
+  { title: "Connect with Lawyers", url: "/lawyers",     icon: Gem },
+  { title: "Cases",                url: "/cases",       icon: FolderOpen },
+  { title: "Latest Cases Report",  url: "/judge-notes", icon: BarChart2 },
+  { title: "Find/Post Jobs",       url: "/jobs",        icon: Briefcase },
+  { title: "All Chats",            url: "/recent",      icon: MessagesSquare },
   { title: "JuristLens",           url: "/juristlens",  icon: ScanSearch },
   { title: "Marketplace",          url: "/marketplace", icon: LayoutGrid },
-  { title: "Find/Post Jobs",       url: "/jobs",        icon: Briefcase },
-  { title: "Latest Cases Report",  url: "/judge-notes", icon: BarChart2 },
   { title: "Diary",                url: "/diary",       icon: CalendarDays },
-  { title: "Cases",                url: "/cases",       icon: FolderOpen },
-  { title: "Connect with Lawyers", url: "/lawyers",     icon: Gem },
-  { title: "All Chats",            url: "/recent",     icon: MessagesSquare },
 ];
 
 const bottomItems = [
