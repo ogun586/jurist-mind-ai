@@ -19,7 +19,7 @@ import Marketplace from "./pages/Marketplace";
 import LawyersDirectory from "./pages/LawyersDirectory";
 import { LawyerProfilePage } from "@/components/lawyers";
 import JudgeNotes from "./pages/JudgeNotes";
-import JTL from "./pages/JTL";
+
 import JuristLens from "./pages/JuristLens";
 import History from "./pages/History";
 import Upgrade from "./pages/Upgrade";
@@ -129,7 +129,7 @@ function ProtectedLayout() {
               <Route path="/lawyers" element={<LawyersDirectory />} />
               <Route path="/lawyers/:slug" element={<LawyerProfilePage />} />
               <Route path="/judge-notes" element={<JudgeNotes />} />
-              <Route path="/jtl" element={<JTL />} />
+              
               <Route path="/juristlens" element={<JuristLens />} />
               <Route path="/history" element={<History />} />
               <Route path="/recent" element={<Recent />} />
