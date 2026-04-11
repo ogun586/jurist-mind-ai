@@ -668,6 +668,120 @@ export default function Admin() {
               </div>
             )}
           </TabsContent>
+
+          {/* ─── Referrals & Withdrawals Tab ─── */}
+          <TabsContent value="referrals">
+            <div className="space-y-8">
+              {/* Withdrawal Requests */}
+              <div>
+                <h2 className="text-lg font-semibold text-foreground mb-4">Withdrawal Requests ({withdrawalRequests.length})</h2>
+                {referralsLoading ? (
+                  <p className="text-muted-foreground text-sm">Loading…</p>
+                ) : withdrawalRequests.length === 0 ? (
+                  <p className="text-muted-foreground text-sm">No withdrawal requests yet.</p>
+                ) : (
+                  <div className="border rounded-xl overflow-hidden">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>User</TableHead>
+                          <TableHead>Amount</TableHead>
+                          <TableHead>Bank</TableHead>
+                          <TableHead>Account</TableHead>
+                          <TableHead>Status</TableHead>
+                          <TableHead>Date</TableHead>
+                          <TableHead className="text-right">Actions</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {withdrawalRequests.map((w: any) => (
+                          <TableRow key={w.id}>
+                            <TableCell className="text-sm">{w.user_id?.slice(0, 8)}…</TableCell>
+                            <TableCell className="font-semibold">₦{w.amount?.toLocaleString()}</TableCell>
+                            <TableCell className="text-sm">{w.bank_name || '—'}</TableCell>
+                            <TableCell className="text-sm font-mono">{w.bank_account_number || '—'} ({w.bank_account_name || '—'})</TableCell>
+                            <TableCell>
+                              <Badge variant={w.status === 'paid' ? 'default' : w.status === 'rejected' ? 'destructive' : 'secondary'} className="text-xs">
+                                {w.status}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="text-xs text-muted-foreground">{w.created_at ? format(new Date(w.created_at), 'MMM d, yyyy') : '—'}</TableCell>
+                            <TableCell className="text-right">
+                              {w.status === 'pending_review' && (
+                                <div className="flex gap-1 justify-end">
+                                  <Button size="sm" variant="default" onClick={() => handleWithdrawalAction(w.id, 'approve')} disabled={processingWithdrawal === w.id}>
+                                    <Check className="w-3 h-3 mr-1" /> Approve
+                                  </Button>
+                                  {rejectingId === w.id ? (
+                                    <div className="flex gap-1 items-center">
+                                      <Input
+                                        placeholder="Reason..."
+                                        value={rejectNote}
+                                        onChange={(e) => setRejectNote(e.target.value)}
+                                        className="h-8 w-40 text-xs"
+                                      />
+                                      <Button size="sm" variant="destructive" onClick={() => handleWithdrawalAction(w.id, 'reject', rejectNote)}>
+                                        Reject
+                                      </Button>
+                                    </div>
+                                  ) : (
+                                    <Button size="sm" variant="outline" onClick={() => setRejectingId(w.id)}>
+                                      <X className="w-3 h-3 mr-1" /> Reject
+                                    </Button>
+                                  )}
+                                </div>
+                              )}
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                )}
+              </div>
+
+              {/* Referral Overview */}
+              <div>
+                <h2 className="text-lg font-semibold text-foreground mb-4">All Referrers ({referralOverview.length})</h2>
+                {referralsLoading ? (
+                  <p className="text-muted-foreground text-sm">Loading…</p>
+                ) : referralOverview.length === 0 ? (
+                  <p className="text-muted-foreground text-sm">No referrers yet.</p>
+                ) : (
+                  <div className="border rounded-xl overflow-hidden">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>User</TableHead>
+                          <TableHead>Code</TableHead>
+                          <TableHead>Clicks</TableHead>
+                          <TableHead>Signups</TableHead>
+                          <TableHead>Paid</TableHead>
+                          <TableHead>Total Earned</TableHead>
+                          <TableHead>Pending</TableHead>
+                          <TableHead>Cleared</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {referralOverview.map((r: any) => (
+                          <TableRow key={r.user_id}>
+                            <TableCell className="font-medium">{r.full_name || '—'}</TableCell>
+                            <TableCell className="font-mono text-xs">{r.referral_code}</TableCell>
+                            <TableCell>{r.clicks}</TableCell>
+                            <TableCell>{r.signups}</TableCell>
+                            <TableCell>{r.paid}</TableCell>
+                            <TableCell className="font-semibold">₦{(r.referral_earnings_total || 0).toLocaleString()}</TableCell>
+                            <TableCell className="text-yellow-500">₦{(r.referral_earnings_pending || 0).toLocaleString()}</TableCell>
+                            <TableCell className="text-green-500">₦{(r.referral_earnings_cleared || 0).toLocaleString()}</TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                )}
+              </div>
+            </div>
+          </TabsContent>
         </Tabs>
 
         {/* ─── Case Form Dialog ─── */}
