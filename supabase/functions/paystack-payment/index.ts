@@ -157,6 +157,19 @@ serve(async (req) => {
               }
             });
           }
+
+          // Process referral commission (never let errors break payment flow)
+          try {
+            await supabaseAdmin.functions.invoke('process-referral-commission', {
+              body: {
+                paying_user_id: user.id,
+                payment_id: payment.id,
+                amount_paid: transaction.amount / 100
+              }
+            });
+          } catch (refErr) {
+            console.error('Referral commission error (non-fatal):', refErr);
+          }
         }
 
         return new Response(JSON.stringify({

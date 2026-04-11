@@ -1299,6 +1299,7 @@ export type Database = {
           email: string | null
           full_name: string | null
           id: string
+          last_withdrawal_at: string | null
           law_firm: string | null
           location_in_country: string | null
           occupation: string | null
@@ -1307,6 +1308,11 @@ export type Database = {
           plan_expires_at: string | null
           plan_key: string | null
           plan_started_at: string | null
+          referral_code: string | null
+          referral_earnings_cleared: number | null
+          referral_earnings_pending: number | null
+          referral_earnings_total: number | null
+          referred_by: string | null
           role: string | null
           school_country: string | null
           school_name: string | null
@@ -1323,6 +1329,7 @@ export type Database = {
           email?: string | null
           full_name?: string | null
           id?: string
+          last_withdrawal_at?: string | null
           law_firm?: string | null
           location_in_country?: string | null
           occupation?: string | null
@@ -1331,6 +1338,11 @@ export type Database = {
           plan_expires_at?: string | null
           plan_key?: string | null
           plan_started_at?: string | null
+          referral_code?: string | null
+          referral_earnings_cleared?: number | null
+          referral_earnings_pending?: number | null
+          referral_earnings_total?: number | null
+          referred_by?: string | null
           role?: string | null
           school_country?: string | null
           school_name?: string | null
@@ -1347,6 +1359,7 @@ export type Database = {
           email?: string | null
           full_name?: string | null
           id?: string
+          last_withdrawal_at?: string | null
           law_firm?: string | null
           location_in_country?: string | null
           occupation?: string | null
@@ -1355,6 +1368,11 @@ export type Database = {
           plan_expires_at?: string | null
           plan_key?: string | null
           plan_started_at?: string | null
+          referral_code?: string | null
+          referral_earnings_cleared?: number | null
+          referral_earnings_pending?: number | null
+          referral_earnings_total?: number | null
+          referred_by?: string | null
           role?: string | null
           school_country?: string | null
           school_name?: string | null
@@ -1369,6 +1387,188 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "plans"
             referencedColumns: ["plan_key"]
+          },
+          {
+            foreignKeyName: "profiles_referred_by_fkey"
+            columns: ["referred_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
+      referral_clicks: {
+        Row: {
+          clicked_at: string | null
+          converted: boolean | null
+          id: string
+          ip_address: string | null
+          platform: string | null
+          referral_code: string
+          referrer_id: string | null
+          user_agent: string | null
+        }
+        Insert: {
+          clicked_at?: string | null
+          converted?: boolean | null
+          id?: string
+          ip_address?: string | null
+          platform?: string | null
+          referral_code: string
+          referrer_id?: string | null
+          user_agent?: string | null
+        }
+        Update: {
+          clicked_at?: string | null
+          converted?: boolean | null
+          id?: string
+          ip_address?: string | null
+          platform?: string | null
+          referral_code?: string
+          referrer_id?: string | null
+          user_agent?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "referral_clicks_referrer_id_fkey"
+            columns: ["referrer_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
+      referral_commissions: {
+        Row: {
+          amount_paid: number
+          cleared_at: string | null
+          clears_at: string
+          commission_amount: number
+          commission_rate: number | null
+          created_at: string | null
+          id: string
+          month_number: number
+          payment_id: string | null
+          referral_id: string
+          referred_id: string
+          referrer_id: string
+          status: string | null
+        }
+        Insert: {
+          amount_paid: number
+          cleared_at?: string | null
+          clears_at: string
+          commission_amount: number
+          commission_rate?: number | null
+          created_at?: string | null
+          id?: string
+          month_number: number
+          payment_id?: string | null
+          referral_id: string
+          referred_id: string
+          referrer_id: string
+          status?: string | null
+        }
+        Update: {
+          amount_paid?: number
+          cleared_at?: string | null
+          clears_at?: string
+          commission_amount?: number
+          commission_rate?: number | null
+          created_at?: string | null
+          id?: string
+          month_number?: number
+          payment_id?: string | null
+          referral_id?: string
+          referred_id?: string
+          referrer_id?: string
+          status?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "referral_commissions_payment_id_fkey"
+            columns: ["payment_id"]
+            isOneToOne: false
+            referencedRelation: "payments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "referral_commissions_referral_id_fkey"
+            columns: ["referral_id"]
+            isOneToOne: false
+            referencedRelation: "referrals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "referral_commissions_referred_id_fkey"
+            columns: ["referred_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "referral_commissions_referrer_id_fkey"
+            columns: ["referrer_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
+      referrals: {
+        Row: {
+          created_at: string | null
+          first_click_at: string | null
+          id: string
+          months_commissioned: number | null
+          paid_at: string | null
+          referral_code: string
+          referred_id: string
+          referrer_id: string
+          signed_up_at: string | null
+          status: string | null
+          total_commission_earned: number | null
+        }
+        Insert: {
+          created_at?: string | null
+          first_click_at?: string | null
+          id?: string
+          months_commissioned?: number | null
+          paid_at?: string | null
+          referral_code: string
+          referred_id: string
+          referrer_id: string
+          signed_up_at?: string | null
+          status?: string | null
+          total_commission_earned?: number | null
+        }
+        Update: {
+          created_at?: string | null
+          first_click_at?: string | null
+          id?: string
+          months_commissioned?: number | null
+          paid_at?: string | null
+          referral_code?: string
+          referred_id?: string
+          referrer_id?: string
+          signed_up_at?: string | null
+          status?: string | null
+          total_commission_earned?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "referrals_referred_id_fkey"
+            columns: ["referred_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "referrals_referrer_id_fkey"
+            columns: ["referrer_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
           },
         ]
       }
@@ -1604,6 +1804,72 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      withdrawal_requests: {
+        Row: {
+          admin_note: string | null
+          amount: number
+          bank_account_name: string
+          bank_account_number: string
+          bank_name: string
+          created_at: string | null
+          id: string
+          paid_at: string | null
+          paystack_transfer_code: string | null
+          paystack_transfer_reference: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string | null
+          user_id: string
+        }
+        Insert: {
+          admin_note?: string | null
+          amount: number
+          bank_account_name: string
+          bank_account_number: string
+          bank_name: string
+          created_at?: string | null
+          id?: string
+          paid_at?: string | null
+          paystack_transfer_code?: string | null
+          paystack_transfer_reference?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string | null
+          user_id: string
+        }
+        Update: {
+          admin_note?: string | null
+          amount?: number
+          bank_account_name?: string
+          bank_account_number?: string
+          bank_name?: string
+          created_at?: string | null
+          id?: string
+          paid_at?: string | null
+          paystack_transfer_code?: string | null
+          paystack_transfer_reference?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "withdrawal_requests_reviewed_by_fkey"
+            columns: ["reviewed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "withdrawal_requests_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+        ]
       }
     }
     Views: {

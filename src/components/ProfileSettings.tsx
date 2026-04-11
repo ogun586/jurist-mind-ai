@@ -3,6 +3,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { GoldSpinner } from '@/components/ui/GoldSpinner';
+import { ReferralDashboard } from '@/components/ReferralDashboard';
 
 interface Country {
   name: { common: string };
@@ -278,6 +279,15 @@ export function ProfileSettings() {
         >
           Signed in as <span style={{ color: '#6b6b80' }}>{user?.email}</span>
         </p>
+
+        {/* ── Divider ── */}
+        <div style={{ margin: '2rem 0', height: '1px', backgroundColor: '#1e1e28' }} />
+
+        {/* ── Referral Dashboard ── */}
+        <h2 style={{ fontSize: '1.1rem', fontWeight: 700, color: '#f0f0f5', marginBottom: '1rem' }}>
+          Referral Commission
+        </h2>
+        <ReferralDashboard />
       </div>
     </div>
   );

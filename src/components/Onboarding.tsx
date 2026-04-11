@@ -282,6 +282,28 @@ export function Onboarding() {
       return;
     }
 
+    // Generate referral code for this user
+    try {
+      await supabase.functions.invoke('generate-referral-code', {
+        body: { user_id: user.id }
+      });
+    } catch (e) {
+      console.error('Referral code generation error:', e);
+    }
+
+    // Apply referral if one exists in localStorage
+    const pendingRef = localStorage.getItem('jurist_ref');
+    if (pendingRef) {
+      try {
+        await supabase.functions.invoke('apply-referral', {
+          body: { new_user_id: user.id, referral_code: pendingRef }
+        });
+      } catch (e) {
+        console.error('Apply referral error:', e);
+      }
+      localStorage.removeItem('jurist_ref');
+    }
+
     // CRITICAL: refresh profile in context BEFORE navigating so route guards see updated state
     await refreshProfile(user.id);
     setSaving(false);
