@@ -29,6 +29,7 @@ import Profile from "./pages/Profile";
 import Recent from "./pages/Recent";
 import SharedChatView from "./pages/SharedChatView";
 import Admin from "./pages/Admin";
+import Join from "./pages/Join";
 
 const queryClient = new QueryClient();
 
@@ -157,6 +158,7 @@ const App = () => (
             <Route path="/terms" element={<Terms />} />
             <Route path="/share/:token" element={<SharedChatView />} />
             <Route path="/onboarding" element={<OnboardingRoute />} />
+            <Route path="/join" element={<Join />} />
 
             {/* All protected routes via layout */}
             <Route path="/admin" element={<AdminRoute />} />
