@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Shield, Scale, Users, Globe, Plus, Check, X, Loader2, Pencil, Trash2, Eye, EyeOff, FileText, Wallet, DollarSign } from "lucide-react";
+import { Shield, Scale, Users, Globe, Plus, Check, X, Loader2, Pencil, Trash2, Eye, EyeOff, FileText, Wallet } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -400,7 +400,7 @@ export default function Admin() {
   async function handleWithdrawalAction(requestId: string, action: 'approve' | 'reject', note?: string) {
     setProcessingWithdrawal(requestId);
     try {
-      const { data: { session } } = await supabase.auth.getSession();
+      await supabase.auth.getSession();
       const res = await supabase.functions.invoke('process-withdrawal', {
         body: { withdrawal_request_id: requestId, action, admin_note: note || '' },
       });
