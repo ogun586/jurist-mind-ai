@@ -352,6 +352,70 @@ export default function Admin() {
     } catch { toast.error("Failed to update"); }
   }
 
+  // ─── Referrals ──────────────────────
+  async function fetchReferralData() {
+    setReferralsLoading(true);
+    try {
+      // Withdrawal requests — admin sees all including bank details
+      const { data: wds } = await (supabase.from as any)('withdrawal_requests')
+        .select('*')
+        .order('created_at', { ascending: false });
+      setWithdrawalRequests(wds || []);
+
+      // Referral overview — all referrers
+      const { data: profiles } = await (supabase.from as any)('profiles')
+        .select('user_id, full_name, referral_code, referral_earnings_pending, referral_earnings_cleared, referral_earnings_total')
+        .not('referral_code', 'is', null);
+
+      if (profiles) {
+        // Get click and referral counts
+        const enriched = [];
+        for (const p of profiles) {
+          const { count: clickCount } = await (supabase.from as any)('referral_clicks')
+            .select('*', { count: 'exact', head: true })
+            .eq('referrer_id', p.user_id);
+          const { count: signupCount } = await (supabase.from as any)('referrals')
+            .select('*', { count: 'exact', head: true })
+            .eq('referrer_id', p.user_id);
+          const { count: paidCount } = await (supabase.from as any)('referrals')
+            .select('*', { count: 'exact', head: true })
+            .eq('referrer_id', p.user_id)
+            .gt('months_commissioned', 0);
+          enriched.push({
+            ...p,
+            clicks: clickCount || 0,
+            signups: signupCount || 0,
+            paid: paidCount || 0,
+          });
+        }
+        setReferralOverview(enriched);
+      }
+    } catch (e: any) {
+      console.error('Fetch referral data error:', e);
+    } finally {
+      setReferralsLoading(false);
+    }
+  }
+
+  async function handleWithdrawalAction(requestId: string, action: 'approve' | 'reject', note?: string) {
+    setProcessingWithdrawal(requestId);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await supabase.functions.invoke('process-withdrawal', {
+        body: { withdrawal_request_id: requestId, action, admin_note: note || '' },
+      });
+      if (res.error) throw res.error;
+      toast.success(`Withdrawal ${action}d`);
+      setRejectingId(null);
+      setRejectNote('');
+      fetchReferralData();
+    } catch (e: any) {
+      toast.error(e.message || 'Failed');
+    } finally {
+      setProcessingWithdrawal(null);
+    }
+  }
+
   const getCountryName = (id: string | null) => {
     if (!id) return "—";
     return allCountries.find((c) => c.id === id)?.name || countriesList.find((c) => c.id === id)?.name || "—";
