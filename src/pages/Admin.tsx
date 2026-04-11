@@ -98,11 +98,20 @@ export default function Admin() {
   const [countriesList, setCountriesList] = useState<Country[]>([]);
   const [countriesLoading, setCountriesLoading] = useState(true);
 
+  // Referral state
+  const [withdrawalRequests, setWithdrawalRequests] = useState<any[]>([]);
+  const [referralOverview, setReferralOverview] = useState<any[]>([]);
+  const [referralsLoading, setReferralsLoading] = useState(true);
+  const [processingWithdrawal, setProcessingWithdrawal] = useState<string | null>(null);
+  const [rejectNote, setRejectNote] = useState('');
+  const [rejectingId, setRejectingId] = useState<string | null>(null);
+
   useEffect(() => {
     fetchCases();
     fetchLawyers();
     fetchCountries();
     fetchJudgeNotes();
+    fetchReferralData();
   }, []);
 
   // ─── Cases ──────────────────────────
