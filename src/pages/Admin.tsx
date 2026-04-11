@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Shield, Scale, Users, Globe, Plus, Check, X, Loader2, Pencil, Trash2, Eye, EyeOff, FileText } from "lucide-react";
+import { Shield, Scale, Users, Globe, Plus, Check, X, Loader2, Pencil, Trash2, Eye, EyeOff, FileText, Wallet, DollarSign } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
