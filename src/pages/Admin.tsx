@@ -435,11 +435,12 @@ export default function Admin() {
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="mb-6">
+          <TabsList className="mb-6 flex-wrap">
             <TabsTrigger value="cases"><Scale className="w-4 h-4 mr-1" /> Cases</TabsTrigger>
             <TabsTrigger value="judge-notes"><FileText className="w-4 h-4 mr-1" /> Judge Notes</TabsTrigger>
             <TabsTrigger value="lawyers"><Users className="w-4 h-4 mr-1" /> Lawyers</TabsTrigger>
             <TabsTrigger value="countries"><Globe className="w-4 h-4 mr-1" /> Countries</TabsTrigger>
+            <TabsTrigger value="referrals"><Wallet className="w-4 h-4 mr-1" /> Referrals</TabsTrigger>
           </TabsList>
 
           {/* ─── Cases Tab ─── */}
