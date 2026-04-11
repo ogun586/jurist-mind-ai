@@ -216,6 +216,14 @@ export function JuristSidebar() {
               </button>
             );
           })}
+          {/* Earnings badge */}
+          {!collapsed && (profile as any)?.referral_earnings_cleared > 0 && (
+            <div className="px-3 py-1.5">
+              <span className="text-xs text-primary font-semibold">
+                ₦{((profile as any).referral_earnings_cleared || 0).toLocaleString()} earned
+              </span>
+            </div>
+          )}
         </div>
 
       </SidebarContent>
