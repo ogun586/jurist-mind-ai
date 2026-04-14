@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { Send, Sparkles, Loader2 } from "lucide-react";
 import { useJuristLens, ChatMessage } from "@/contexts/JuristLensContext";
-import { useAuth } from "@/contexts/AuthContext";
+
 import { supabase } from "@/integrations/supabase/client";
 import ReactMarkdown from "react-markdown";
 import { cn } from "@/lib/utils";
