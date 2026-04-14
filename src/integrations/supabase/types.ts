@@ -713,6 +713,109 @@ export type Database = {
           },
         ]
       }
+      juristlens_clauses: {
+        Row: {
+          clause_type: string | null
+          created_at: string
+          document_id: string
+          end_offset: number | null
+          explanation: string | null
+          id: string
+          page_number: number
+          recommendation: string | null
+          risk_level: string
+          start_offset: number | null
+          text: string
+          title: string
+        }
+        Insert: {
+          clause_type?: string | null
+          created_at?: string
+          document_id: string
+          end_offset?: number | null
+          explanation?: string | null
+          id?: string
+          page_number?: number
+          recommendation?: string | null
+          risk_level?: string
+          start_offset?: number | null
+          text: string
+          title: string
+        }
+        Update: {
+          clause_type?: string | null
+          created_at?: string
+          document_id?: string
+          end_offset?: number | null
+          explanation?: string | null
+          id?: string
+          page_number?: number
+          recommendation?: string | null
+          risk_level?: string
+          start_offset?: number | null
+          text?: string
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "juristlens_clauses_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "juristlens_documents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      juristlens_documents: {
+        Row: {
+          created_at: string
+          file_name: string
+          file_path: string | null
+          file_type: string
+          file_url: string
+          id: string
+          page_count: number | null
+          session_id: string | null
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          file_name: string
+          file_path?: string | null
+          file_type?: string
+          file_url: string
+          id?: string
+          page_count?: number | null
+          session_id?: string | null
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          file_name?: string
+          file_path?: string | null
+          file_type?: string
+          file_url?: string
+          id?: string
+          page_count?: number | null
+          session_id?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "juristlens_documents_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "juristlens_sessions"
+            referencedColumns: ["session_id"]
+          },
+        ]
+      }
       juristlens_messages: {
         Row: {
           answer: string | null
@@ -754,6 +857,38 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "juristlens_sessions"
             referencedColumns: ["session_id"]
+          },
+        ]
+      }
+      juristlens_pages: {
+        Row: {
+          created_at: string
+          document_id: string
+          id: string
+          page_number: number
+          text_content: string | null
+        }
+        Insert: {
+          created_at?: string
+          document_id: string
+          id?: string
+          page_number: number
+          text_content?: string | null
+        }
+        Update: {
+          created_at?: string
+          document_id?: string
+          id?: string
+          page_number?: number
+          text_content?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "juristlens_pages_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "juristlens_documents"
+            referencedColumns: ["id"]
           },
         ]
       }

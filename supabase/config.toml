@@ -102,3 +102,6 @@ verify_jwt = false
 
 [functions.process-withdrawal]
 verify_jwt = true
+
+[functions.process-juristlens]
+verify_jwt = false
