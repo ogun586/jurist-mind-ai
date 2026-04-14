@@ -7,7 +7,6 @@ import ReactMarkdown from "react-markdown";
 import { cn } from "@/lib/utils";
 
 export default function ChatPanel() {
-  const { user } = useAuth();
   const {
     currentDocument, clauses, chatMessages, chatLoading,
     selectedClause, selectClause, addChatMessage, setChatLoading,
