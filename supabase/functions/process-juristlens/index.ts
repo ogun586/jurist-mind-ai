@@ -1,10 +1,95 @@
-import { corsHeaders } from "https://deno.land/x/cors@v1.2.2/mod.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
 
 const CORS = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
+
+const RENDER_BASE = "https://juristmind.onrender.com/api/juristlens";
+const MAX_RETRIES = 3;
+
+// ── Retry helper ──────────────────────────────────────────────────────────────
+async function fetchWithRetry(url: string, opts: RequestInit, retries = MAX_RETRIES): Promise<Response> {
+  for (let attempt = 1; attempt <= retries; attempt++) {
+    try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 120000); // 2 min timeout
+      const res = await fetch(url, { ...opts, signal: controller.signal });
+      clearTimeout(timeout);
+      if (res.ok || res.status < 500) return res;
+      console.error(`Attempt ${attempt}/${retries} failed: ${res.status}`);
+    } catch (e: any) {
+      console.error(`Attempt ${attempt}/${retries} error:`, e.message);
+      if (attempt === retries) throw e;
+    }
+    // Exponential backoff: 2s, 4s, 8s
+    await new Promise((r) => setTimeout(r, Math.pow(2, attempt) * 1000));
+  }
+  throw new Error("All retry attempts failed");
+}
+
+// ── Fuzzy offset mapping ──────────────────────────────────────────────────────
+function mapClauseOffsets(
+  clauseText: string,
+  pageText: string
+): { startOffset: number; endOffset: number; matchQuality: string } {
+  if (!clauseText || !pageText) return { startOffset: 0, endOffset: 0, matchQuality: "page_only" };
+
+  // Normalize
+  const normalize = (s: string) => s.replace(/\s+/g, " ").trim().toLowerCase();
+  const normClause = normalize(clauseText);
+  const normPage = normalize(pageText);
+
+  // 1. Exact match
+  const exactIdx = normPage.indexOf(normClause);
+  if (exactIdx >= 0) {
+    return { startOffset: exactIdx, endOffset: exactIdx + normClause.length, matchQuality: "exact" };
+  }
+
+  // 2. Partial exact (first 80 chars)
+  const partialNeedle = normClause.slice(0, 80);
+  const partialIdx = normPage.indexOf(partialNeedle);
+  if (partialIdx >= 0) {
+    return {
+      startOffset: partialIdx,
+      endOffset: Math.min(partialIdx + normClause.length, normPage.length),
+      matchQuality: "exact",
+    };
+  }
+
+  // 3. Sliding window fuzzy match
+  const windowSize = normClause.length;
+  const tolerance = Math.floor(windowSize * 0.15);
+  let bestScore = 0;
+  let bestIdx = -1;
+
+  for (let i = 0; i <= normPage.length - windowSize + tolerance; i++) {
+    const window = normPage.slice(i, i + windowSize);
+    // Token overlap score
+    const clauseTokens = new Set(normClause.split(/\s+/));
+    const windowTokens = window.split(/\s+/);
+    let matches = 0;
+    for (const t of windowTokens) {
+      if (clauseTokens.has(t)) matches++;
+    }
+    const score = matches / clauseTokens.size;
+    if (score > bestScore) {
+      bestScore = score;
+      bestIdx = i;
+    }
+  }
+
+  if (bestScore >= 0.82 && bestIdx >= 0) {
+    return {
+      startOffset: bestIdx,
+      endOffset: bestIdx + windowSize,
+      matchQuality: "approximate",
+    };
+  }
+
+  console.warn(`[page_only] Could not map clause: "${clauseText.slice(0, 50)}..."`);
+  return { startOffset: 0, endOffset: 0, matchQuality: "page_only" };
+}
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
@@ -26,9 +111,15 @@ Deno.serve(async (req) => {
     );
     if (authError || !user) throw new Error("Unauthorized");
 
-    const { document_id, action } = await req.json();
+    const body = await req.json();
+    const { document_id, action } = body;
 
+    // ═══════════════════════════════════════════════════════════════════════════
+    // EXTRACT CLAUSES
+    // ═══════════════════════════════════════════════════════════════════════════
     if (action === "extract_clauses") {
+      const startTime = Date.now();
+
       // 1. Get document
       const { data: doc, error: docErr } = await supabase
         .from("juristlens_documents")
@@ -37,139 +128,146 @@ Deno.serve(async (req) => {
         .single();
       if (docErr || !doc) throw new Error("Document not found");
 
-      // Update status to processing
-      await supabase
-        .from("juristlens_documents")
-        .update({ status: "processing" })
-        .eq("id", document_id);
+      // Idempotency: skip if already completed
+      if (doc.status === "completed") {
+        return new Response(
+          JSON.stringify({ success: true, message: "Already processed", clause_count: 0 }),
+          { headers: { ...CORS, "Content-Type": "application/json" } }
+        );
+      }
 
-      // 2. Send document to Render backend for text extraction
-      const extractRes = await fetch("https://juristmind.onrender.com/api/juristlens/extract-pages", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ document_url: doc.file_url, file_type: doc.file_type }),
-      });
+      // Update status
+      await supabase.from("juristlens_documents").update({ status: "processing" }).eq("id", document_id);
 
       let pages: { page_number: number; text: string }[] = [];
-      
-      if (extractRes.ok) {
-        const extractData = await extractRes.json();
-        pages = extractData.pages || [];
+
+      // 2. Try Render backend for text extraction (with retry)
+      try {
+        const extractRes = await fetchWithRetry(
+          `${RENDER_BASE}/extract-pages`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "Authorization": authHeader,
+            },
+            body: JSON.stringify({ document_url: doc.file_url, file_type: doc.file_type }),
+          }
+        );
+
+        if (extractRes.ok) {
+          const extractData = await extractRes.json();
+          pages = extractData.pages || [];
+        }
+      } catch (e: any) {
+        console.error("Render extraction failed, using AI fallback:", e.message);
       }
 
-      // If Render extraction fails or returns empty, use AI to process
+      // Fallback if Render fails
       if (pages.length === 0) {
-        // Fallback: send the document URL directly to AI for analysis
-        pages = [{ page_number: 1, text: "Document at: " + doc.file_url }];
+        pages = [{ page_number: 1, text: `Document: ${doc.file_name}\nURL: ${doc.file_url}` }];
       }
 
-      // 3. Store pages in DB
-      if (pages.length > 0) {
-        const pageRows = pages.map((p) => ({
-          document_id,
-          page_number: p.page_number,
-          text_content: p.text,
-        }));
-        await supabase.from("juristlens_pages").insert(pageRows);
-      }
+      // 3. Store pages
+      // Clear existing pages for idempotency (re-processing)
+      await supabase.from("juristlens_pages").delete().eq("document_id", document_id);
+      const pageRows = pages.map((p) => ({
+        document_id,
+        page_number: p.page_number,
+        text_content: p.text,
+      }));
+      await supabase.from("juristlens_pages").insert(pageRows);
 
-      // Update page count
-      await supabase
-        .from("juristlens_documents")
-        .update({ page_count: pages.length })
-        .eq("id", document_id);
+      // Calculate word count
+      const totalWords = pages.reduce((acc, p) => acc + p.text.split(/\s+/).length, 0);
+      await supabase.from("juristlens_documents").update({
+        page_count: pages.length,
+        word_count: totalWords,
+      }).eq("id", document_id);
 
-      // 4. Combine text for AI analysis (limit to ~50k chars)
+      // 4. Combine text for AI
       const combinedText = pages
         .map((p) => `--- PAGE ${p.page_number} ---\n${p.text}`)
         .join("\n\n")
         .slice(0, 50000);
 
-      // 5. Call AI for clause extraction
-      const aiRes = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${lovableKey}`,
-        },
-        body: JSON.stringify({
-          model: "google/gemini-3-flash-preview",
-          messages: [
-            {
-              role: "system",
-              content: `You are a legal document analyst. Analyze the following legal document and extract all important clauses.
+      // 5. AI clause extraction (with retry)
+      let aiContent = "[]";
+      try {
+        const aiRes = await fetchWithRetry(
+          "https://ai.gateway.lovable.dev/v1/chat/completions",
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${lovableKey}`,
+            },
+            body: JSON.stringify({
+              model: "google/gemini-3-flash-preview",
+              messages: [
+                {
+                  role: "system",
+                  content: `You are a legal document analyst. Extract all important clauses from the following document.
 
-For each clause, provide:
-- title: A concise title for the clause
-- text: The exact text from the document (quoted verbatim)
+For each clause, return:
+- title: Concise clause title
+- text: EXACT verbatim text from the document
 - clause_type: One of: termination, payment, liability, indemnity, confidentiality, non_compete, force_majeure, dispute_resolution, governing_law, warranty, intellectual_property, data_protection, assignment, amendment, notice, insurance, representations, obligations, rights, other
-- risk_level: "high", "medium", or "low" based on legal risk
-- explanation: Brief explanation of what this clause means and its implications
-- recommendation: Actionable legal recommendation regarding this clause
-- page_number: The page number where this clause appears (from the PAGE markers)
-- start_offset: The approximate character offset where this clause starts on the page (0 if unsure)
-- end_offset: The approximate character offset where this clause ends on the page (0 if unsure)
+- risk_level: "high", "medium", or "low"
+- explanation: Brief explanation of implications
+- recommendation: Actionable legal recommendation
+- page_number: Page number (from PAGE markers)
 
-Return a JSON array of clause objects. Focus on the most legally significant clauses (aim for 8-20 clauses depending on document length). Prioritize high-risk clauses.
+Return ONLY valid JSON array. No markdown. Format: [{"title":"...","text":"...","clause_type":"...","risk_level":"...","explanation":"...","recommendation":"...","page_number":1}]
 
-IMPORTANT: Return ONLY valid JSON, no markdown formatting. Format: [{"title":"...","text":"...","clause_type":"...","risk_level":"...","explanation":"...","recommendation":"...","page_number":1,"start_offset":0,"end_offset":0}]`,
-            },
-            {
-              role: "user",
-              content: `Analyze this legal document and extract all important clauses:\n\n${combinedText}`,
-            },
-          ],
-          temperature: 0.2,
-          max_tokens: 8000,
-        }),
-      });
+Extract 8-20 clauses. Prioritize high-risk clauses.`,
+                },
+                {
+                  role: "user",
+                  content: `Analyze this legal document:\n\n${combinedText}`,
+                },
+              ],
+              temperature: 0.2,
+              max_tokens: 8000,
+            }),
+          }
+        );
 
-      if (!aiRes.ok) {
-        const errText = await aiRes.text();
-        console.error("AI error:", errText);
-        await supabase
-          .from("juristlens_documents")
-          .update({ status: "failed" })
-          .eq("id", document_id);
-        throw new Error("AI extraction failed");
+        if (!aiRes.ok) throw new Error(`AI returned ${aiRes.status}`);
+        const aiData = await aiRes.json();
+        aiContent = aiData.choices?.[0]?.message?.content || "[]";
+      } catch (e: any) {
+        console.error("AI extraction failed:", e.message);
+        await supabase.from("juristlens_documents").update({
+          status: "failed",
+          error_msg: `AI extraction failed: ${e.message}`,
+        }).eq("id", document_id);
+        throw new Error("AI extraction failed after retries");
       }
 
-      const aiData = await aiRes.json();
-      let content = aiData.choices?.[0]?.message?.content || "[]";
-      
-      // Clean up potential markdown wrapping
-      content = content.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
-
+      // 6. Parse AI response
+      aiContent = aiContent.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
       let clauses: any[] = [];
       try {
-        clauses = JSON.parse(content);
-      } catch (e) {
-        console.error("Failed to parse AI response:", content);
-        // Try to find JSON array in the response
-        const match = content.match(/\[[\s\S]*\]/);
+        clauses = JSON.parse(aiContent);
+      } catch {
+        const match = aiContent.match(/\[[\s\S]*\]/);
         if (match) {
           try { clauses = JSON.parse(match[0]); } catch {}
         }
       }
 
-      // 6. Store clauses
+      // 7. Map offsets and store clauses
       if (clauses.length > 0) {
-        // Find actual offsets by searching page text
-        const clauseRows = clauses.map((c: any) => {
-          let pageNum = c.page_number || 1;
-          let startOffset = c.start_offset || 0;
-          let endOffset = c.end_offset || 0;
+        // Clear existing clauses for idempotency
+        await supabase.from("juristlens_clauses").delete().eq("document_id", document_id);
 
-          // Try to find exact text position in page content
+        const clauseRows = clauses.map((c: any) => {
+          const pageNum = c.page_number || 1;
           const page = pages.find((p) => p.page_number === pageNum);
-          if (page && c.text) {
-            const searchText = c.text.slice(0, 80); // Use first 80 chars to find
-            const idx = page.text.indexOf(searchText);
-            if (idx >= 0) {
-              startOffset = idx;
-              endOffset = idx + c.text.length;
-            }
-          }
+          const offsets = page
+            ? mapClauseOffsets(c.text || "", page.text)
+            : { startOffset: 0, endOffset: 0, matchQuality: "page_only" };
 
           return {
             document_id,
@@ -180,30 +278,36 @@ IMPORTANT: Return ONLY valid JSON, no markdown formatting. Format: [{"title":"..
             explanation: c.explanation || "",
             recommendation: c.recommendation || "",
             page_number: pageNum,
-            start_offset: startOffset,
-            end_offset: endOffset,
+            start_offset: offsets.startOffset,
+            end_offset: offsets.endOffset,
+            match_quality: offsets.matchQuality,
           };
         });
 
         await supabase.from("juristlens_clauses").insert(clauseRows);
       }
 
-      // 7. Mark complete
-      await supabase
-        .from("juristlens_documents")
-        .update({ status: "completed" })
-        .eq("id", document_id);
+      // 8. Mark complete
+      const processingTime = Date.now() - startTime;
+      console.log(`[JuristLens] Document ${document_id} processed in ${processingTime}ms, ${clauses.length} clauses`);
+
+      await supabase.from("juristlens_documents").update({
+        status: "completed",
+        error_msg: null,
+      }).eq("id", document_id);
 
       return new Response(
-        JSON.stringify({ success: true, clause_count: clauses.length }),
+        JSON.stringify({ success: true, clause_count: clauses.length, processing_time_ms: processingTime }),
         { headers: { ...CORS, "Content-Type": "application/json" } }
       );
     }
 
+    // ═══════════════════════════════════════════════════════════════════════════
+    // RAG CHAT
+    // ═══════════════════════════════════════════════════════════════════════════
     if (action === "chat") {
-      const { question, clause_ids, chat_history } = await req.json();
+      const { question, clause_ids, chat_history } = body;
 
-      // Get document and its clauses
       const { data: doc } = await supabase
         .from("juristlens_documents")
         .select("*")
@@ -215,67 +319,61 @@ IMPORTANT: Return ONLY valid JSON, no markdown formatting. Format: [{"title":"..
         .select("*")
         .eq("document_id", document_id);
 
-      // Build context from relevant clauses
       const relevantClauses = clause_ids?.length
         ? clauses?.filter((c: any) => clause_ids.includes(c.id))
         : clauses;
 
       const clauseContext = (relevantClauses || [])
-        .map(
-          (c: any, i: number) =>
-            `[Clause ${i + 1}: "${c.title}" (${c.risk_level} risk, Page ${c.page_number})]\n${c.text}\nExplanation: ${c.explanation}`
+        .map((c: any, i: number) =>
+          `[Clause ${i + 1}: "${c.title}" (${c.risk_level} risk, Page ${c.page_number})]\n${c.text}\nExplanation: ${c.explanation}`
         )
         .join("\n\n");
+
+      // Sliding window: limit context
+      const recentHistory = (chat_history || []).slice(-10);
 
       const messages: any[] = [
         {
           role: "system",
-          content: `You are JuristLens AI, an expert legal document analyst. You are analyzing the document "${doc?.file_name || "unknown"}".
+          content: `You are JuristLens AI, an expert legal document analyst. You are analyzing "${doc?.file_name || "unknown"}".
 
-Here are the extracted clauses from this document:
+Extracted clauses:
 
 ${clauseContext}
 
-When answering questions:
-1. Reference specific clauses by their title and ID when relevant
-2. Format clause references as [[Clause: clause_title]] so they can be made clickable
-3. Provide clear, actionable legal analysis
-4. Highlight potential risks and recommendations
-5. Be precise and cite specific text from the clauses when possible
-
-Always respond in a professional, clear manner suitable for legal professionals.`,
+Instructions:
+1. Reference specific clauses as [[Clause: clause_title]]
+2. Be precise, cite specific text
+3. Highlight risks and provide actionable recommendations
+4. Be professional and suitable for legal professionals`,
         },
+        ...recentHistory.map((m: any) => ({ role: m.role, content: m.content })),
+        { role: "user", content: question },
       ];
 
-      // Add chat history
-      if (chat_history?.length) {
-        for (const msg of chat_history) {
-          messages.push({ role: msg.role, content: msg.content });
+      const aiRes = await fetchWithRetry(
+        "https://ai.gateway.lovable.dev/v1/chat/completions",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${lovableKey}`,
+          },
+          body: JSON.stringify({
+            model: "google/gemini-3-flash-preview",
+            messages,
+            temperature: 0.3,
+            max_tokens: 4000,
+          }),
         }
-      }
-
-      messages.push({ role: "user", content: question });
-
-      const aiRes = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${lovableKey}`,
-        },
-        body: JSON.stringify({
-          model: "google/gemini-3-flash-preview",
-          messages,
-          temperature: 0.3,
-          max_tokens: 4000,
-        }),
-      });
+      );
 
       if (!aiRes.ok) throw new Error("AI chat failed");
 
       const aiData = await aiRes.json();
-      const answer = aiData.choices?.[0]?.message?.content || "I couldn't generate a response.";
+      const answer = aiData.choices?.[0]?.message?.content || "No response generated.";
 
-      // Extract clause references from the answer
+      // Extract clause references
       const clauseRefs: string[] = [];
       const refPattern = /\[\[Clause: ([^\]]+)\]\]/g;
       let match;
@@ -283,23 +381,68 @@ Always respond in a professional, clear manner suitable for legal professionals.
         clauseRefs.push(match[1]);
       }
 
-      // Map references to clause IDs
       const referencedClauses = (clauses || [])
         .filter((c: any) => clauseRefs.some((ref) => c.title.includes(ref) || ref.includes(c.title)))
         .map((c: any) => ({ id: c.id, title: c.title, page_number: c.page_number }));
 
       return new Response(
-        JSON.stringify({
-          answer,
-          referenced_clauses: referencedClauses,
-        }),
+        JSON.stringify({ answer, referenced_clauses: referencedClauses }),
         { headers: { ...CORS, "Content-Type": "application/json" } }
       );
     }
 
+    // ═══════════════════════════════════════════════════════════════════════════
+    // GENERATE REPORT (proxy to Render)
+    // ═══════════════════════════════════════════════════════════════════════════
+    if (action === "generate_report") {
+      const { data: doc } = await supabase
+        .from("juristlens_documents")
+        .select("*")
+        .eq("id", document_id)
+        .single();
+
+      const { data: clauses } = await supabase
+        .from("juristlens_clauses")
+        .select("*")
+        .eq("document_id", document_id)
+        .order("page_number");
+
+      try {
+        const res = await fetchWithRetry(
+          `${RENDER_BASE}/export`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "Authorization": authHeader,
+            },
+            body: JSON.stringify({
+              document_name: doc?.file_name,
+              clauses: (clauses || []).map((c: any) => ({
+                title: c.title,
+                text: c.text,
+                risk_level: c.risk_level,
+                clause_type: c.clause_type,
+                explanation: c.explanation,
+                recommendation: c.recommendation,
+                page_number: c.page_number,
+              })),
+              format: "pdf",
+            }),
+          }
+        );
+
+        if (!res.ok) throw new Error("Report generation failed");
+        const data = await res.json();
+        return new Response(JSON.stringify(data), { headers: { ...CORS, "Content-Type": "application/json" } });
+      } catch {
+        throw new Error("Report generation failed");
+      }
+    }
+
     throw new Error("Invalid action");
   } catch (e: any) {
-    console.error("Error:", e.message);
+    console.error("[JuristLens Error]:", e.message);
     return new Response(
       JSON.stringify({ error: e.message }),
       { status: 400, headers: { ...CORS, "Content-Type": "application/json" } }

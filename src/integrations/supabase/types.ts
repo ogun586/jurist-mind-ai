@@ -721,6 +721,7 @@ export type Database = {
           end_offset: number | null
           explanation: string | null
           id: string
+          match_quality: string | null
           page_number: number
           recommendation: string | null
           risk_level: string
@@ -735,6 +736,7 @@ export type Database = {
           end_offset?: number | null
           explanation?: string | null
           id?: string
+          match_quality?: string | null
           page_number?: number
           recommendation?: string | null
           risk_level?: string
@@ -749,6 +751,7 @@ export type Database = {
           end_offset?: number | null
           explanation?: string | null
           id?: string
+          match_quality?: string | null
           page_number?: number
           recommendation?: string | null
           risk_level?: string
@@ -769,6 +772,7 @@ export type Database = {
       juristlens_documents: {
         Row: {
           created_at: string
+          error_msg: string | null
           file_name: string
           file_path: string | null
           file_type: string
@@ -779,9 +783,12 @@ export type Database = {
           status: string
           updated_at: string
           user_id: string
+          version: number | null
+          word_count: number | null
         }
         Insert: {
           created_at?: string
+          error_msg?: string | null
           file_name: string
           file_path?: string | null
           file_type?: string
@@ -792,9 +799,12 @@ export type Database = {
           status?: string
           updated_at?: string
           user_id: string
+          version?: number | null
+          word_count?: number | null
         }
         Update: {
           created_at?: string
+          error_msg?: string | null
           file_name?: string
           file_path?: string | null
           file_type?: string
@@ -805,6 +815,8 @@ export type Database = {
           status?: string
           updated_at?: string
           user_id?: string
+          version?: number | null
+          word_count?: number | null
         }
         Relationships: [
           {
