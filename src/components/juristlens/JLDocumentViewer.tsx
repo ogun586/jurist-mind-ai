@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect, useRef } from "react";
 import {
-  ChevronLeft, ChevronRight, ZoomIn, ZoomOut, Maximize2,
+  ChevronLeft, ChevronRight, ZoomIn, ZoomOut,
   Loader2, Download, Printer, X, Search, Menu, MoreVertical
 } from "lucide-react";
 import { Document, Page, pdfjs } from "react-pdf";
@@ -119,7 +119,7 @@ export default function JLDocumentViewer() {
   const {
     currentDocument, selectedClause, highlightRange, viewerPage, viewerScale,
     viewerNumPages, navigateToPage, setViewerScale, setViewerNumPages,
-    extractedClauses, setSelectedClause, clearSelectedClause,
+    extractedClauses, clearSelectedClause,
   } = useJuristLensStore();
 
   const [loading, setLoading] = useState(true);
@@ -176,7 +176,7 @@ export default function JLDocumentViewer() {
     }
   };
 
-  const pageClauses = extractedClauses.filter((c) => c.page_number === viewerPage);
+  const _pageClauses = extractedClauses.filter((c) => c.page_number === viewerPage);
 
   if (!currentDocument) {
     return (

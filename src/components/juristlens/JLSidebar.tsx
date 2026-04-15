@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import {
   Search, Plus, Home, MessageSquare, FileText,
-  Clock, ChevronDown, Sparkles, CheckCircle, Loader2, AlertTriangle
+  ChevronDown, Sparkles, CheckCircle, Loader2
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";

@@ -17,7 +17,7 @@ export default function JLChatPanel() {
   const {
     currentDocument, extractedClauses, chatMessages, chatLoading,
     selectedClause, chatContext, setSelectedClause, addChatMessage,
-    setChatLoading, setActiveTab, clearSelectedClause,
+    setChatLoading, clearSelectedClause,
   } = useJuristLensStore();
 
   const [input, setInput] = useState("");

@@ -107,7 +107,7 @@ interface JuristLensState {
   resetState: () => void;
 }
 
-export const useJuristLensStore = create<JuristLensState>((set, get) => ({
+export const useJuristLensStore = create<JuristLensState>((set) => ({
   currentDocument: null,
   parsedPages: [],
   extractedClauses: [],

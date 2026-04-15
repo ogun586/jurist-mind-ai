@@ -1,7 +1,7 @@
-import { useState, useRef, useCallback, useEffect } from "react";
+import { useState, useRef, useCallback } from "react";
 import {
-  Search, Upload, FileText, X, Loader2, Download,
-  Eye, MessageSquare, Sparkles, BookOpen, Share2, MoreVertical, Pencil
+  Search, FileText, Loader2, Download,
+  Eye, MessageSquare, Sparkles, Share2, MoreVertical, Pencil
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
@@ -21,7 +21,7 @@ function UploadScreen() {
   const { toast } = useToast();
   const {
     setCurrentDocument, setExtractedClauses, setParsedPages,
-    setProcessingStatus, currentDocument,
+    setProcessingStatus,
   } = useJuristLensStore();
 
   const [uploading, setUploading] = useState(false);
@@ -223,7 +223,7 @@ function UploadScreen() {
 function AnalysisView() {
   const {
     activeTab, setActiveTab, currentDocument, extractedClauses,
-    resetState,
+    
   } = useJuristLensStore();
   const { toast } = useToast();
   const [exporting, setExporting] = useState(false);
