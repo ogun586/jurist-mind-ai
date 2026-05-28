@@ -359,48 +359,6 @@ export default function LawyersDirectory() {
           </DialogContent>
         </Dialog>
 
-        {/* Register Dialog */}
-        <Dialog open={showRegister} onOpenChange={setShowRegister}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Complete Your Lawyer Profile</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-3 max-h-[60vh] overflow-y-auto pr-2">
-              <div>
-                <Label>Bar Number</Label>
-                <Input value={regBarNumber} onChange={(e) => setRegBarNumber(e.target.value)} placeholder="e.g. SCN/12345" className="mt-1" />
-              </div>
-              <div>
-                <Label>Specializations (comma-separated)</Label>
-                <Input value={regSpecs} onChange={(e) => setRegSpecs(e.target.value)} placeholder="e.g. Criminal Law, Corporate Law" className="mt-1" />
-              </div>
-              <div>
-                <Label>Years of Experience</Label>
-                <Input type="number" value={regYears} onChange={(e) => setRegYears(e.target.value)} placeholder="e.g. 5" className="mt-1" />
-              </div>
-              <div>
-                <Label>Bio *</Label>
-                <Textarea value={regBio} onChange={(e) => setRegBio(e.target.value)} placeholder="Tell clients about yourself..." className="mt-1" />
-              </div>
-              <div>
-                <Label>Hourly Rate (₦)</Label>
-                <Input type="number" value={regRate} onChange={(e) => setRegRate(e.target.value)} placeholder="e.g. 50000" className="mt-1" />
-              </div>
-              <div>
-                <Label>City</Label>
-                <Input value={regCity} onChange={(e) => setRegCity(e.target.value)} placeholder="e.g. Lagos" className="mt-1" />
-              </div>
-              <div className="flex items-center gap-3">
-                <Switch checked={regAvailable} onCheckedChange={setRegAvailable} />
-                <Label>Available for hire</Label>
-              </div>
-            </div>
-            <Button onClick={handleRegister} disabled={registering} className="w-full mt-2 bg-primary text-primary-foreground hover:bg-primary/90">
-              {registering ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
-              Submit for Verification
-            </Button>
-          </DialogContent>
-        </Dialog>
       </div>
     </div>
   );
