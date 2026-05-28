@@ -7,12 +7,11 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Switch } from "@/components/ui/switch";
-import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useCountryId, useAllCountries } from "@/hooks/useCountryId";
 import { toast } from "sonner";
+import { RegisterLawyerDialog } from "@/components/lawyers/RegisterLawyerDialog";
 
 interface LawyerRow {
   id: string;
@@ -48,17 +47,7 @@ export default function LawyersDirectory() {
   const [sentRequests, setSentRequests] = useState<Set<string>>(new Set());
   const [showFilters, setShowFilters] = useState(false);
 
-  // Registration state
-  const [showRegister, setShowRegister] = useState(false);
   const [hasProfile, setHasProfile] = useState<boolean | null>(null);
-  const [regBarNumber, setRegBarNumber] = useState("");
-  const [regSpecs, setRegSpecs] = useState("");
-  const [regYears, setRegYears] = useState("");
-  const [regBio, setRegBio] = useState("");
-  const [regRate, setRegRate] = useState("");
-  const [regCity, setRegCity] = useState("");
-  const [regAvailable, setRegAvailable] = useState(true);
-  const [registering, setRegistering] = useState(false);
 
   useEffect(() => {
     if (countryId && !selectedCountryId) setSelectedCountryId(countryId);
@@ -142,37 +131,6 @@ export default function LawyersDirectory() {
       toast.error(e.message?.includes("unique") ? "Request already sent" : "Failed to send request");
     } finally {
       setSubmitting(false);
-    }
-  }
-
-  async function handleRegister() {
-    if (!user || !countryId) return;
-    if (!regBio.trim()) { toast.error("Please provide a bio"); return; }
-    setRegistering(true);
-    try {
-      const specs = regSpecs.split(",").map((s) => s.trim()).filter(Boolean);
-      const { error } = await (supabase.from as any)("lawyers").insert({
-        user_id: user.id,
-        name: profile?.full_name || profile?.display_name || "Unnamed",
-        email: profile?.email || "",
-        state: userCountry,
-        country_id_ref: countryId,
-        bar_number: regBarNumber || null,
-        specialization: specs,
-        years_experience: parseInt(regYears) || 0,
-        description: regBio,
-        hourly_rate: regRate ? parseFloat(regRate) : null,
-        city: regCity || null,
-        is_available: regAvailable,
-      });
-      if (error) throw error;
-      toast.success("Profile submitted for verification!");
-      setShowRegister(false);
-      setHasProfile(true);
-    } catch (e: any) {
-      toast.error(e.message || "Failed to register");
-    } finally {
-      setRegistering(false);
     }
   }
 
