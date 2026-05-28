@@ -334,7 +334,7 @@ export function RegisterLawyerDialog({ onLawyerAdded }: RegisterLawyerDialogProp
                     id="name"
                     value={form.name}
                     onChange={(e) => setForm({ ...form, name: e.target.value })}
-                    placeholder="Barrister Festus Ogun"
+                    placeholder="Your full legal name"
                     required
                   />
                 </div>
@@ -357,7 +357,7 @@ export function RegisterLawyerDialog({ onLawyerAdded }: RegisterLawyerDialogProp
                     id="phone"
                     value={form.phone}
                     onChange={(e) => setForm({ ...form, phone: e.target.value })}
-                    placeholder="+234 XXX XXX XXXX"
+                    placeholder="Include country code"
                   />
                 </div>
                 <div>
@@ -379,7 +379,7 @@ export function RegisterLawyerDialog({ onLawyerAdded }: RegisterLawyerDialogProp
                   rows={3}
                   value={form.description}
                   onChange={(e) => setForm({ ...form, description: e.target.value })}
-                  placeholder="A brief introduction about yourself and your legal expertise..."
+                  placeholder="A brief introduction shown on your JuristMind public profile..."
                   required
                 />
               </div>
@@ -401,7 +401,7 @@ export function RegisterLawyerDialog({ onLawyerAdded }: RegisterLawyerDialogProp
                     id="firm_name"
                     value={form.firm_name}
                     onChange={(e) => setForm({ ...form, firm_name: e.target.value })}
-                    placeholder="FO Legal"
+                    placeholder="Your law firm or chambers"
                   />
                 </div>
                 <div>
@@ -410,7 +410,7 @@ export function RegisterLawyerDialog({ onLawyerAdded }: RegisterLawyerDialogProp
                     id="bar_number"
                     value={form.bar_number}
                     onChange={(e) => setForm({ ...form, bar_number: e.target.value })}
-                    placeholder="SCN/XXXXXX/XXX"
+                    placeholder="Official bar enrolment number"
                     required
                   />
                 </div>
@@ -422,7 +422,7 @@ export function RegisterLawyerDialog({ onLawyerAdded }: RegisterLawyerDialogProp
                   id="specialization"
                   value={form.specialization.join(', ')}
                   onChange={(e) => handleSpecializationChange(e.target.value)}
-                  placeholder="Corporate Law, Family Law, Criminal Defense"
+                  placeholder="e.g. Corporate, Litigation, Human Rights"
                   required
                 />
               </div>
@@ -434,7 +434,7 @@ export function RegisterLawyerDialog({ onLawyerAdded }: RegisterLawyerDialogProp
                     id="state"
                     value={form.state}
                     onChange={(e) => setForm({ ...form, state: e.target.value })}
-                    placeholder="Lagos"
+                    placeholder="State / Province"
                     required
                   />
                 </div>
@@ -444,7 +444,7 @@ export function RegisterLawyerDialog({ onLawyerAdded }: RegisterLawyerDialogProp
                     id="city"
                     value={form.city}
                     onChange={(e) => setForm({ ...form, city: e.target.value })}
-                    placeholder="Ikeja"
+                    placeholder="City"
                     required
                   />
                 </div>
@@ -456,7 +456,7 @@ export function RegisterLawyerDialog({ onLawyerAdded }: RegisterLawyerDialogProp
                   id="street"
                   value={form.street}
                   onChange={(e) => setForm({ ...form, street: e.target.value })}
-                  placeholder="123 Legal Avenue"
+                  placeholder="Office address (optional)"
                 />
               </div>
 
@@ -467,7 +467,7 @@ export function RegisterLawyerDialog({ onLawyerAdded }: RegisterLawyerDialogProp
                     id="website"
                     value={form.website}
                     onChange={(e) => setForm({ ...form, website: e.target.value })}
-                    placeholder="https://folegal.com"
+                    placeholder="https://your-firm.com"
                   />
                 </div>
                 <div>
@@ -476,7 +476,7 @@ export function RegisterLawyerDialog({ onLawyerAdded }: RegisterLawyerDialogProp
                     id="social_media"
                     value={form.social_media}
                     onChange={(e) => setForm({ ...form, social_media: e.target.value })}
-                    placeholder="linkedin.com/in/festusogun"
+                    placeholder="linkedin.com/in/your-handle"
                   />
                 </div>
               </div>
