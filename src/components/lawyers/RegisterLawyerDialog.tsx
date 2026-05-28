@@ -270,7 +270,7 @@ export function RegisterLawyerDialog({ onLawyerAdded }: RegisterLawyerDialogProp
         <DialogHeader>
           <DialogTitle className="text-2xl">Create Your Legal Identity</DialogTitle>
           <DialogDescription>
-            Build your professional profile on JuristMind
+            Build your professional profile on JuristMind{countryName ? ` — ${countryName}` : ""}
           </DialogDescription>
         </DialogHeader>
 
