@@ -7,12 +7,11 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Switch } from "@/components/ui/switch";
-import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useCountryId, useAllCountries } from "@/hooks/useCountryId";
 import { toast } from "sonner";
+import { RegisterLawyerDialog } from "@/components/lawyers/RegisterLawyerDialog";
 
 interface LawyerRow {
   id: string;
@@ -48,17 +47,7 @@ export default function LawyersDirectory() {
   const [sentRequests, setSentRequests] = useState<Set<string>>(new Set());
   const [showFilters, setShowFilters] = useState(false);
 
-  // Registration state
-  const [showRegister, setShowRegister] = useState(false);
   const [hasProfile, setHasProfile] = useState<boolean | null>(null);
-  const [regBarNumber, setRegBarNumber] = useState("");
-  const [regSpecs, setRegSpecs] = useState("");
-  const [regYears, setRegYears] = useState("");
-  const [regBio, setRegBio] = useState("");
-  const [regRate, setRegRate] = useState("");
-  const [regCity, setRegCity] = useState("");
-  const [regAvailable, setRegAvailable] = useState(true);
-  const [registering, setRegistering] = useState(false);
 
   useEffect(() => {
     if (countryId && !selectedCountryId) setSelectedCountryId(countryId);
@@ -142,37 +131,6 @@ export default function LawyersDirectory() {
       toast.error(e.message?.includes("unique") ? "Request already sent" : "Failed to send request");
     } finally {
       setSubmitting(false);
-    }
-  }
-
-  async function handleRegister() {
-    if (!user || !countryId) return;
-    if (!regBio.trim()) { toast.error("Please provide a bio"); return; }
-    setRegistering(true);
-    try {
-      const specs = regSpecs.split(",").map((s) => s.trim()).filter(Boolean);
-      const { error } = await (supabase.from as any)("lawyers").insert({
-        user_id: user.id,
-        name: profile?.full_name || profile?.display_name || "Unnamed",
-        email: profile?.email || "",
-        state: userCountry,
-        country_id_ref: countryId,
-        bar_number: regBarNumber || null,
-        specialization: specs,
-        years_experience: parseInt(regYears) || 0,
-        description: regBio,
-        hourly_rate: regRate ? parseFloat(regRate) : null,
-        city: regCity || null,
-        is_available: regAvailable,
-      });
-      if (error) throw error;
-      toast.success("Profile submitted for verification!");
-      setShowRegister(false);
-      setHasProfile(true);
-    } catch (e: any) {
-      toast.error(e.message || "Failed to register");
-    } finally {
-      setRegistering(false);
     }
   }
 
@@ -267,10 +225,8 @@ export default function LawyersDirectory() {
             <Button variant="outline" onClick={() => setShowFilters(!showFilters)}>
               <Filter className="w-4 h-4 mr-1" /> Filters
             </Button>
-            {profile?.user_type?.toLowerCase() === "lawyer" && hasProfile === false && (
-              <Button onClick={() => setShowRegister(true)} className="bg-primary text-primary-foreground hover:bg-primary/90">
-                <Plus className="w-4 h-4 mr-1" /> Register as Lawyer
-              </Button>
+            {user && hasProfile === false && (
+              <RegisterLawyerDialog onLawyerAdded={() => { setHasProfile(true); if (selectedCountryId) fetchLawyers(selectedCountryId); }} />
             )}
           </div>
         </div>
@@ -292,17 +248,13 @@ export default function LawyersDirectory() {
           </div>
         )}
 
-        {/* Lawyer Registration Banner (alternative position) */}
-        {profile?.user_type?.toLowerCase() === "lawyer" && hasProfile === false && (
+        {user && hasProfile === false && (
           <div className="mb-6 p-4 rounded-xl border border-primary/20 bg-primary/5">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <Shield className="w-5 h-5 text-primary" />
-                <p className="text-sm font-medium text-foreground">
-                  Complete your profile to appear in the directory.
-                </p>
-              </div>
-              <Button size="sm" onClick={() => setShowRegister(true)}>Complete Profile</Button>
+            <div className="flex items-center gap-3">
+              <Shield className="w-5 h-5 text-primary" />
+              <p className="text-sm font-medium text-foreground">
+                Are you a lawyer? Complete your profile to appear in the directory across {selectedCountryName}.
+              </p>
             </div>
           </div>
         )}
@@ -407,48 +359,6 @@ export default function LawyersDirectory() {
           </DialogContent>
         </Dialog>
 
-        {/* Register Dialog */}
-        <Dialog open={showRegister} onOpenChange={setShowRegister}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Complete Your Lawyer Profile</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-3 max-h-[60vh] overflow-y-auto pr-2">
-              <div>
-                <Label>Bar Number</Label>
-                <Input value={regBarNumber} onChange={(e) => setRegBarNumber(e.target.value)} placeholder="e.g. SCN/12345" className="mt-1" />
-              </div>
-              <div>
-                <Label>Specializations (comma-separated)</Label>
-                <Input value={regSpecs} onChange={(e) => setRegSpecs(e.target.value)} placeholder="e.g. Criminal Law, Corporate Law" className="mt-1" />
-              </div>
-              <div>
-                <Label>Years of Experience</Label>
-                <Input type="number" value={regYears} onChange={(e) => setRegYears(e.target.value)} placeholder="e.g. 5" className="mt-1" />
-              </div>
-              <div>
-                <Label>Bio *</Label>
-                <Textarea value={regBio} onChange={(e) => setRegBio(e.target.value)} placeholder="Tell clients about yourself..." className="mt-1" />
-              </div>
-              <div>
-                <Label>Hourly Rate (₦)</Label>
-                <Input type="number" value={regRate} onChange={(e) => setRegRate(e.target.value)} placeholder="e.g. 50000" className="mt-1" />
-              </div>
-              <div>
-                <Label>City</Label>
-                <Input value={regCity} onChange={(e) => setRegCity(e.target.value)} placeholder="e.g. Lagos" className="mt-1" />
-              </div>
-              <div className="flex items-center gap-3">
-                <Switch checked={regAvailable} onCheckedChange={setRegAvailable} />
-                <Label>Available for hire</Label>
-              </div>
-            </div>
-            <Button onClick={handleRegister} disabled={registering} className="w-full mt-2 bg-primary text-primary-foreground hover:bg-primary/90">
-              {registering ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
-              Submit for Verification
-            </Button>
-          </DialogContent>
-        </Dialog>
       </div>
     </div>
   );

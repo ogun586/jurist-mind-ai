@@ -14,6 +14,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import { Progress } from "@/components/ui/progress";
+import { useCountryId } from "@/hooks/useCountryId";
 
 interface RegisterLawyerDialogProps {
   onLawyerAdded: () => void;
@@ -40,7 +41,8 @@ interface LawyerForm {
 }
 
 export function RegisterLawyerDialog({ onLawyerAdded }: RegisterLawyerDialogProps) {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
+  const { countryId, countryName } = useCountryId();
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [step, setStep] = useState(1);
@@ -53,7 +55,7 @@ export function RegisterLawyerDialog({ onLawyerAdded }: RegisterLawyerDialogProp
   const credentialInputRef = useRef<HTMLInputElement>(null);
 
   const [form, setForm] = useState<LawyerForm>({
-    name: "",
+    name: (profile as any)?.full_name || (profile as any)?.display_name || "",
     email: user?.email || "",
     phone: "",
     state: "",
@@ -167,7 +169,8 @@ export function RegisterLawyerDialog({ onLawyerAdded }: RegisterLawyerDialogProp
             city: form.city,
             street: form.street,
             postal_code: form.postal_code,
-            country: 'Nigeria',
+            country: countryName || (profile as any)?.country || null,
+            country_id_ref: countryId,
             firm_name: form.firm_name,
             description: form.description,
             specialization: form.specialization,
@@ -185,6 +188,7 @@ export function RegisterLawyerDialog({ onLawyerAdded }: RegisterLawyerDialogProp
       });
 
       if (error) throw error;
+      if ((data as any)?.error) throw new Error((data as any).error);
       setUploadProgress(90);
 
       // Create credential record if file was uploaded
@@ -224,7 +228,7 @@ export function RegisterLawyerDialog({ onLawyerAdded }: RegisterLawyerDialogProp
     setCredentialFile(null);
     setUploadProgress(0);
     setForm({
-      name: "",
+      name: (profile as any)?.full_name || (profile as any)?.display_name || "",
       email: user?.email || "",
       phone: "",
       state: "",
@@ -266,7 +270,7 @@ export function RegisterLawyerDialog({ onLawyerAdded }: RegisterLawyerDialogProp
         <DialogHeader>
           <DialogTitle className="text-2xl">Create Your Legal Identity</DialogTitle>
           <DialogDescription>
-            Build your professional profile on JuristMind
+            Build your professional profile on JuristMind{countryName ? ` — ${countryName}` : ""}
           </DialogDescription>
         </DialogHeader>
 
@@ -330,7 +334,7 @@ export function RegisterLawyerDialog({ onLawyerAdded }: RegisterLawyerDialogProp
                     id="name"
                     value={form.name}
                     onChange={(e) => setForm({ ...form, name: e.target.value })}
-                    placeholder="Barrister Festus Ogun"
+                    placeholder="Your full legal name"
                     required
                   />
                 </div>
@@ -353,7 +357,7 @@ export function RegisterLawyerDialog({ onLawyerAdded }: RegisterLawyerDialogProp
                     id="phone"
                     value={form.phone}
                     onChange={(e) => setForm({ ...form, phone: e.target.value })}
-                    placeholder="+234 XXX XXX XXXX"
+                    placeholder="Include country code"
                   />
                 </div>
                 <div>
@@ -375,7 +379,7 @@ export function RegisterLawyerDialog({ onLawyerAdded }: RegisterLawyerDialogProp
                   rows={3}
                   value={form.description}
                   onChange={(e) => setForm({ ...form, description: e.target.value })}
-                  placeholder="A brief introduction about yourself and your legal expertise..."
+                  placeholder="A brief introduction shown on your JuristMind public profile..."
                   required
                 />
               </div>
@@ -397,7 +401,7 @@ export function RegisterLawyerDialog({ onLawyerAdded }: RegisterLawyerDialogProp
                     id="firm_name"
                     value={form.firm_name}
                     onChange={(e) => setForm({ ...form, firm_name: e.target.value })}
-                    placeholder="FO Legal"
+                    placeholder="Your law firm or chambers"
                   />
                 </div>
                 <div>
@@ -406,7 +410,7 @@ export function RegisterLawyerDialog({ onLawyerAdded }: RegisterLawyerDialogProp
                     id="bar_number"
                     value={form.bar_number}
                     onChange={(e) => setForm({ ...form, bar_number: e.target.value })}
-                    placeholder="SCN/XXXXXX/XXX"
+                    placeholder="Official bar enrolment number"
                     required
                   />
                 </div>
@@ -418,7 +422,7 @@ export function RegisterLawyerDialog({ onLawyerAdded }: RegisterLawyerDialogProp
                   id="specialization"
                   value={form.specialization.join(', ')}
                   onChange={(e) => handleSpecializationChange(e.target.value)}
-                  placeholder="Corporate Law, Family Law, Criminal Defense"
+                  placeholder="e.g. Corporate, Litigation, Human Rights"
                   required
                 />
               </div>
@@ -430,7 +434,7 @@ export function RegisterLawyerDialog({ onLawyerAdded }: RegisterLawyerDialogProp
                     id="state"
                     value={form.state}
                     onChange={(e) => setForm({ ...form, state: e.target.value })}
-                    placeholder="Lagos"
+                    placeholder="State / Province"
                     required
                   />
                 </div>
@@ -440,7 +444,7 @@ export function RegisterLawyerDialog({ onLawyerAdded }: RegisterLawyerDialogProp
                     id="city"
                     value={form.city}
                     onChange={(e) => setForm({ ...form, city: e.target.value })}
-                    placeholder="Ikeja"
+                    placeholder="City"
                     required
                   />
                 </div>
@@ -452,7 +456,7 @@ export function RegisterLawyerDialog({ onLawyerAdded }: RegisterLawyerDialogProp
                   id="street"
                   value={form.street}
                   onChange={(e) => setForm({ ...form, street: e.target.value })}
-                  placeholder="123 Legal Avenue"
+                  placeholder="Office address (optional)"
                 />
               </div>
 
@@ -463,7 +467,7 @@ export function RegisterLawyerDialog({ onLawyerAdded }: RegisterLawyerDialogProp
                     id="website"
                     value={form.website}
                     onChange={(e) => setForm({ ...form, website: e.target.value })}
-                    placeholder="https://folegal.com"
+                    placeholder="https://your-firm.com"
                   />
                 </div>
                 <div>
@@ -472,7 +476,7 @@ export function RegisterLawyerDialog({ onLawyerAdded }: RegisterLawyerDialogProp
                     id="social_media"
                     value={form.social_media}
                     onChange={(e) => setForm({ ...form, social_media: e.target.value })}
-                    placeholder="linkedin.com/in/festusogun"
+                    placeholder="linkedin.com/in/your-handle"
                   />
                 </div>
               </div>
