@@ -225,10 +225,8 @@ export default function LawyersDirectory() {
             <Button variant="outline" onClick={() => setShowFilters(!showFilters)}>
               <Filter className="w-4 h-4 mr-1" /> Filters
             </Button>
-            {profile?.user_type?.toLowerCase() === "lawyer" && hasProfile === false && (
-              <Button onClick={() => setShowRegister(true)} className="bg-primary text-primary-foreground hover:bg-primary/90">
-                <Plus className="w-4 h-4 mr-1" /> Register as Lawyer
-              </Button>
+            {user && hasProfile === false && (
+              <RegisterLawyerDialog onLawyerAdded={() => { setHasProfile(true); if (selectedCountryId) fetchLawyers(selectedCountryId); }} />
             )}
           </div>
         </div>
@@ -250,17 +248,13 @@ export default function LawyersDirectory() {
           </div>
         )}
 
-        {/* Lawyer Registration Banner (alternative position) */}
-        {profile?.user_type?.toLowerCase() === "lawyer" && hasProfile === false && (
+        {user && hasProfile === false && (
           <div className="mb-6 p-4 rounded-xl border border-primary/20 bg-primary/5">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <Shield className="w-5 h-5 text-primary" />
-                <p className="text-sm font-medium text-foreground">
-                  Complete your profile to appear in the directory.
-                </p>
-              </div>
-              <Button size="sm" onClick={() => setShowRegister(true)}>Complete Profile</Button>
+            <div className="flex items-center gap-3">
+              <Shield className="w-5 h-5 text-primary" />
+              <p className="text-sm font-medium text-foreground">
+                Are you a lawyer? Complete your profile to appear in the directory across {selectedCountryName}.
+              </p>
             </div>
           </div>
         )}
