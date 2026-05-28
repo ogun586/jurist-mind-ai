@@ -14,6 +14,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import { Progress } from "@/components/ui/progress";
+import { useCountryId } from "@/hooks/useCountryId";
 
 interface RegisterLawyerDialogProps {
   onLawyerAdded: () => void;
@@ -40,7 +41,8 @@ interface LawyerForm {
 }
 
 export function RegisterLawyerDialog({ onLawyerAdded }: RegisterLawyerDialogProps) {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
+  const { countryId, countryName } = useCountryId();
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [step, setStep] = useState(1);
@@ -53,7 +55,7 @@ export function RegisterLawyerDialog({ onLawyerAdded }: RegisterLawyerDialogProp
   const credentialInputRef = useRef<HTMLInputElement>(null);
 
   const [form, setForm] = useState<LawyerForm>({
-    name: "",
+    name: (profile as any)?.full_name || (profile as any)?.display_name || "",
     email: user?.email || "",
     phone: "",
     state: "",
@@ -167,7 +169,8 @@ export function RegisterLawyerDialog({ onLawyerAdded }: RegisterLawyerDialogProp
             city: form.city,
             street: form.street,
             postal_code: form.postal_code,
-            country: 'Nigeria',
+            country: countryName || (profile as any)?.country || null,
+            country_id_ref: countryId,
             firm_name: form.firm_name,
             description: form.description,
             specialization: form.specialization,
@@ -185,6 +188,7 @@ export function RegisterLawyerDialog({ onLawyerAdded }: RegisterLawyerDialogProp
       });
 
       if (error) throw error;
+      if ((data as any)?.error) throw new Error((data as any).error);
       setUploadProgress(90);
 
       // Create credential record if file was uploaded
@@ -224,7 +228,7 @@ export function RegisterLawyerDialog({ onLawyerAdded }: RegisterLawyerDialogProp
     setCredentialFile(null);
     setUploadProgress(0);
     setForm({
-      name: "",
+      name: (profile as any)?.full_name || (profile as any)?.display_name || "",
       email: user?.email || "",
       phone: "",
       state: "",
