@@ -105,3 +105,6 @@ verify_jwt = true
 
 [functions.process-juristlens]
 verify_jwt = false
+
+[functions.lawyers-sitemap]
+verify_jwt = false

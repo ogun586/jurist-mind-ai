@@ -160,6 +160,9 @@ const App = () => (
             <Route path="/onboarding" element={<OnboardingRoute />} />
             <Route path="/join" element={<Join />} />
 
+            {/* Public lawyer profile (SEO indexable, no auth required) */}
+            <Route path="/lawyers/:slug" element={<LawyerProfilePage />} />
+
             {/* All protected routes via layout */}
             <Route path="/admin" element={<AdminRoute />} />
             <Route path="/*" element={<ProtectedLayout />} />

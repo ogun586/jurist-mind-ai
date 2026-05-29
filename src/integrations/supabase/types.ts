@@ -214,6 +214,107 @@ export type Database = {
         }
         Relationships: []
       }
+      client_intake_files: {
+        Row: {
+          client_id: string
+          consultation_id: string
+          created_at: string
+          file_name: string
+          file_path: string
+          file_size: number | null
+          id: string
+          lawyer_id: string
+          mime_type: string | null
+        }
+        Insert: {
+          client_id: string
+          consultation_id: string
+          created_at?: string
+          file_name: string
+          file_path: string
+          file_size?: number | null
+          id?: string
+          lawyer_id: string
+          mime_type?: string | null
+        }
+        Update: {
+          client_id?: string
+          consultation_id?: string
+          created_at?: string
+          file_name?: string
+          file_path?: string
+          file_size?: number | null
+          id?: string
+          lawyer_id?: string
+          mime_type?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_intake_files_consultation_id_fkey"
+            columns: ["consultation_id"]
+            isOneToOne: false
+            referencedRelation: "consultations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_intake_files_lawyer_id_fkey"
+            columns: ["lawyer_id"]
+            isOneToOne: false
+            referencedRelation: "lawyers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      consultations: {
+        Row: {
+          client_id: string
+          completed_at: string | null
+          created_at: string
+          id: string
+          lawyer_id: string
+          message: string | null
+          mode: string
+          scheduled_at: string | null
+          status: string
+          subject: string
+          updated_at: string
+        }
+        Insert: {
+          client_id: string
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          lawyer_id: string
+          message?: string | null
+          mode?: string
+          scheduled_at?: string | null
+          status?: string
+          subject: string
+          updated_at?: string
+        }
+        Update: {
+          client_id?: string
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          lawyer_id?: string
+          message?: string | null
+          mode?: string
+          scheduled_at?: string | null
+          status?: string
+          subject?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "consultations_lawyer_id_fkey"
+            columns: ["lawyer_id"]
+            isOneToOne: false
+            referencedRelation: "lawyers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       countries: {
         Row: {
           code: string
@@ -1072,8 +1173,101 @@ export type Database = {
           },
         ]
       }
+      lawyer_reviews: {
+        Row: {
+          client_id: string
+          consultation_id: string
+          created_at: string
+          id: string
+          is_approved: boolean | null
+          lawyer_id: string
+          rating: number
+          review: string | null
+        }
+        Insert: {
+          client_id: string
+          consultation_id: string
+          created_at?: string
+          id?: string
+          is_approved?: boolean | null
+          lawyer_id: string
+          rating: number
+          review?: string | null
+        }
+        Update: {
+          client_id?: string
+          consultation_id?: string
+          created_at?: string
+          id?: string
+          is_approved?: boolean | null
+          lawyer_id?: string
+          rating?: number
+          review?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lawyer_reviews_consultation_id_fkey"
+            columns: ["consultation_id"]
+            isOneToOne: true
+            referencedRelation: "consultations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lawyer_reviews_lawyer_id_fkey"
+            columns: ["lawyer_id"]
+            isOneToOne: false
+            referencedRelation: "lawyers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      lawyer_schedules: {
+        Row: {
+          created_at: string
+          day_of_week: number
+          end_time: string
+          id: string
+          lawyer_id: string
+          mode: string
+          start_time: string
+          timezone: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          day_of_week: number
+          end_time: string
+          id?: string
+          lawyer_id: string
+          mode?: string
+          start_time: string
+          timezone?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          day_of_week?: number
+          end_time?: string
+          id?: string
+          lawyer_id?: string
+          mode?: string
+          start_time?: string
+          timezone?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lawyer_schedules_lawyer_id_fkey"
+            columns: ["lawyer_id"]
+            isOneToOne: false
+            referencedRelation: "lawyers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       lawyers: {
         Row: {
+          address_json: Json | null
           availability_status: string | null
           avatar_url: string | null
           bar_number: string | null
@@ -1091,6 +1285,7 @@ export type Database = {
           id: string
           intro_video_url: string | null
           is_available: boolean | null
+          is_verified: boolean | null
           location: string | null
           name: string
           phone: string | null
@@ -1114,6 +1309,7 @@ export type Database = {
           years_experience: number | null
         }
         Insert: {
+          address_json?: Json | null
           availability_status?: string | null
           avatar_url?: string | null
           bar_number?: string | null
@@ -1131,6 +1327,7 @@ export type Database = {
           id?: string
           intro_video_url?: string | null
           is_available?: boolean | null
+          is_verified?: boolean | null
           location?: string | null
           name: string
           phone?: string | null
@@ -1154,6 +1351,7 @@ export type Database = {
           years_experience?: number | null
         }
         Update: {
+          address_json?: Json | null
           availability_status?: string | null
           avatar_url?: string | null
           bar_number?: string | null
@@ -1171,6 +1369,7 @@ export type Database = {
           id?: string
           intro_video_url?: string | null
           is_available?: boolean | null
+          is_verified?: boolean | null
           location?: string | null
           name?: string
           phone?: string | null
