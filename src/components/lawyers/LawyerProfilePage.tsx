@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
+import { Helmet } from "react-helmet-async";
 import { 
   ArrowLeft, MapPin, Mail, Phone, MessageSquare, CheckCircle2, 
   Globe, Linkedin, Briefcase, Award, Eye, Play, Shield
@@ -13,6 +14,11 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import LawyerRating from "./LawyerRating";
+import { LawyerSchedule } from "./LawyerSchedule";
+import { LawyerReviews } from "./LawyerReviews";
+import { IntakeVault } from "./IntakeVault";
+import { ConsultationRequest } from "./ConsultationRequest";
+import { StickyMobileActions } from "./StickyMobileActions";
 
 interface Lawyer {
   id: string;
@@ -89,6 +95,10 @@ export default function LawyerProfilePage() {
     }
   };
 
+  const scrollToBook = () => {
+    document.getElementById("book-section")?.scrollIntoView({ behavior: "smooth", block: "center" });
+  };
+
   const getInitials = (name: string) => {
     return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
   };
@@ -155,8 +165,51 @@ export default function LawyerProfilePage() {
   const accentColor = lawyer.brand_accent_color || 'hsl(var(--primary))';
   const bioData = lawyer.bio_structured || { about: lawyer.description, approach: '', case_studies: [] };
 
+  const profileUrl = `https://jurist-mind-ai.lovable.app/lawyers/${lawyer.slug || lawyer.id}`;
+  const seoTitle = `${lawyer.name}${lawyer.specialization?.[0] ? ` | ${lawyer.specialization[0]}` : ""}${lawyer.city ? ` in ${lawyer.city}` : ""} | JuristMind`;
+  const seoDescription = (bioData.about || lawyer.description || `${lawyer.name} — verified lawyer on JuristMind.`).slice(0, 155);
+
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "LegalService",
+    name: lawyer.name,
+    url: profileUrl,
+    image: lawyer.avatar_url || undefined,
+    description: seoDescription,
+    address: {
+      "@type": "PostalAddress",
+      streetAddress: lawyer.street || undefined,
+      addressLocality: lawyer.city || undefined,
+      addressRegion: lawyer.state,
+      postalCode: lawyer.postal_code || undefined,
+      addressCountry: lawyer.country || undefined,
+    },
+    areaServed: [lawyer.city, lawyer.state, lawyer.country].filter(Boolean),
+    knowsAbout: lawyer.specialization,
+    telephone: lawyer.phone || undefined,
+    email: lawyer.email,
+    aggregateRating: lawyer.total_ratings > 0 ? {
+      "@type": "AggregateRating",
+      ratingValue: lawyer.rating,
+      reviewCount: lawyer.total_ratings,
+    } : undefined,
+  };
+
   return (
     <div className="h-full bg-background overflow-y-auto">
+      <Helmet>
+        <title>{seoTitle}</title>
+        <meta name="description" content={seoDescription} />
+        <link rel="canonical" href={profileUrl} />
+        <meta property="og:title" content={seoTitle} />
+        <meta property="og:description" content={seoDescription} />
+        <meta property="og:url" content={profileUrl} />
+        <meta property="og:type" content="profile" />
+        {lawyer.avatar_url && <meta property="og:image" content={lawyer.avatar_url} />}
+        <meta name="twitter:card" content="summary_large_image" />
+        <script type="application/ld+json">{JSON.stringify(jsonLd)}</script>
+      </Helmet>
+
       {/* Hero Header */}
       <div 
         className="relative h-32 md:h-40"
@@ -243,7 +296,7 @@ export default function LawyerProfilePage() {
         </div>
 
         {/* Action Buttons */}
-        <div className="flex flex-wrap gap-3 mb-8">
+        <div id="book-section" className="flex flex-wrap gap-3 mb-8">
           <Button 
             size="lg" 
             className="flex-1 md:flex-none"
@@ -262,6 +315,7 @@ export default function LawyerProfilePage() {
             <Phone className="w-4 h-4 mr-2" />
             Call
           </Button>
+          <ConsultationRequest lawyerId={lawyer.id} lawyerName={lawyer.name} accentColor={accentColor} />
           {lawyer.intro_video_url && (
             <Button variant="outline" size="lg" className="flex-1 md:flex-none">
               <Play className="w-4 h-4 mr-2" />
@@ -345,6 +399,21 @@ export default function LawyerProfilePage() {
           </TabsContent>
         </Tabs>
 
+        {/* Availability */}
+        <div className="mb-8">
+          <LawyerSchedule lawyerId={lawyer.id} accentColor={accentColor} />
+        </div>
+
+        {/* Verified Reviews */}
+        <div className="mb-8">
+          <LawyerReviews lawyerId={lawyer.id} accentColor={accentColor} />
+        </div>
+
+        {/* Secure Intake Vault */}
+        <div className="mb-8">
+          <IntakeVault lawyerId={lawyer.id} />
+        </div>
+
         {/* Contact Info Card */}
         <Card className="mb-8">
           <CardHeader>
@@ -417,6 +486,13 @@ export default function LawyerProfilePage() {
           Back to Directory
         </Button>
       </div>
+
+      <StickyMobileActions
+        email={lawyer.email}
+        phone={lawyer.phone}
+        onBook={scrollToBook}
+        accentColor={accentColor}
+      />
     </div>
   );
 }
