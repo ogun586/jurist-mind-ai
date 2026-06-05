@@ -14,7 +14,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import { Progress } from "@/components/ui/progress";
-import { useCountryId } from "@/hooks/useCountryId";
+import { useCountryId, useAllCountries } from "@/hooks/useCountryId";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface RegisterLawyerDialogProps {
   onLawyerAdded: () => void;
@@ -43,6 +44,8 @@ interface LawyerForm {
 export function RegisterLawyerDialog({ onLawyerAdded }: RegisterLawyerDialogProps) {
   const { user, profile } = useAuth();
   const { countryId, countryName } = useCountryId();
+  const { countries } = useAllCountries();
+  const [selectedCountryId, setSelectedCountryId] = useState<string>("");
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [step, setStep] = useState(1);
@@ -74,6 +77,9 @@ export function RegisterLawyerDialog({ onLawyerAdded }: RegisterLawyerDialogProp
     bio_approach: ""
   });
 
+  // Default to user's onboarded country once countries load
+  useState; // keep React happy
+
   const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
@@ -102,11 +108,23 @@ export function RegisterLawyerDialog({ onLawyerAdded }: RegisterLawyerDialogProp
     setForm({ ...form, specialization: specs });
   };
 
+  // Sync default country once countries are loaded
+  if (!selectedCountryId && countryId && countries.find(c => c.id === countryId)) {
+    // initialise after first paint; safe because state update only fires once
+    queueMicrotask(() => setSelectedCountryId(countryId));
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!user) {
       toast.error('You must be logged in to register');
+      return;
+    }
+
+    if (!selectedCountryId) {
+      toast.error('Please select your country of practice');
+      setStep(2);
       return;
     }
     
@@ -169,8 +187,8 @@ export function RegisterLawyerDialog({ onLawyerAdded }: RegisterLawyerDialogProp
             city: form.city,
             street: form.street,
             postal_code: form.postal_code,
-            country: countryName || (profile as any)?.country || null,
-            country_id_ref: countryId,
+            country: countries.find(c => c.id === selectedCountryId)?.name || null,
+            country_id_ref: selectedCountryId,
             firm_name: form.firm_name,
             description: form.description,
             specialization: form.specialization,
@@ -270,7 +288,7 @@ export function RegisterLawyerDialog({ onLawyerAdded }: RegisterLawyerDialogProp
         <DialogHeader>
           <DialogTitle className="text-2xl">Create Your Legal Identity</DialogTitle>
           <DialogDescription>
-            Build your professional profile on JuristMind{countryName ? ` — ${countryName}` : ""}
+            Build your professional profile on JuristMind — practising in any supported jurisdiction
           </DialogDescription>
         </DialogHeader>
 
@@ -448,6 +466,23 @@ export function RegisterLawyerDialog({ onLawyerAdded }: RegisterLawyerDialogProp
                     required
                   />
                 </div>
+              </div>
+
+              <div>
+                <Label htmlFor="country">Country of Practice *</Label>
+                <Select value={selectedCountryId} onValueChange={setSelectedCountryId}>
+                  <SelectTrigger id="country">
+                    <SelectValue placeholder="Select your country" />
+                  </SelectTrigger>
+                  <SelectContent className="max-h-72">
+                    {countries.map((c) => (
+                      <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Your profile will be filed under this jurisdiction on JuristMind.
+                </p>
               </div>
 
               <div>

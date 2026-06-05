@@ -170,7 +170,16 @@ serve(async (req) => {
         }
 
         console.log('Lawyer registered successfully:', data);
-        
+
+        // Fire-and-forget admin email notification (never block registration on email)
+        try {
+          await supabaseClient.functions.invoke('notify-admin-lawyer-signup', {
+            body: { lawyer: data },
+          });
+        } catch (notifyErr) {
+          console.error('Admin notification failed:', notifyErr);
+        }
+
         return new Response(JSON.stringify({ 
           success: true,
           data: data,

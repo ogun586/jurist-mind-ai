@@ -108,3 +108,6 @@ verify_jwt = false
 
 [functions.lawyers-sitemap]
 verify_jwt = false
+
+[functions.notify-admin-lawyer-signup]
+verify_jwt = false
