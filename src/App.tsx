@@ -30,6 +30,7 @@ import Recent from "./pages/Recent";
 import SharedChatView from "./pages/SharedChatView";
 import Admin from "./pages/Admin";
 import Join from "./pages/Join";
+import FirmProfilePage from "./pages/FirmProfilePage";
 
 const queryClient = new QueryClient();
 
@@ -162,6 +163,7 @@ const App = () => (
 
             {/* Public lawyer profile (SEO indexable, no auth required) */}
             <Route path="/lawyers/:slug" element={<LawyerProfilePage />} />
+            <Route path="/firms/:slug" element={<FirmProfilePage />} />
 
             {/* All protected routes via layout */}
             <Route path="/admin" element={<AdminRoute />} />
