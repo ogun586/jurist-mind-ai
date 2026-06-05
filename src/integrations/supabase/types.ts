@@ -652,6 +652,96 @@ export type Database = {
         }
         Relationships: []
       }
+      firm_members: {
+        Row: {
+          firm_id: string
+          id: string
+          is_primary_contact: boolean | null
+          joined_at: string
+          lawyer_id: string
+          title_at_firm: string | null
+        }
+        Insert: {
+          firm_id: string
+          id?: string
+          is_primary_contact?: boolean | null
+          joined_at?: string
+          lawyer_id: string
+          title_at_firm?: string | null
+        }
+        Update: {
+          firm_id?: string
+          id?: string
+          is_primary_contact?: boolean | null
+          joined_at?: string
+          lawyer_id?: string
+          title_at_firm?: string | null
+        }
+        Relationships: []
+      }
+      firms: {
+        Row: {
+          brand_accent_color: string | null
+          city: string | null
+          country: string | null
+          country_id_ref: string | null
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          is_priority_partner: boolean | null
+          is_verified: boolean | null
+          logo_url: string | null
+          name: string
+          postal_code: string | null
+          slug: string | null
+          state: string | null
+          street: string | null
+          updated_at: string
+          website: string | null
+        }
+        Insert: {
+          brand_accent_color?: string | null
+          city?: string | null
+          country?: string | null
+          country_id_ref?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_priority_partner?: boolean | null
+          is_verified?: boolean | null
+          logo_url?: string | null
+          name: string
+          postal_code?: string | null
+          slug?: string | null
+          state?: string | null
+          street?: string | null
+          updated_at?: string
+          website?: string | null
+        }
+        Update: {
+          brand_accent_color?: string | null
+          city?: string | null
+          country?: string | null
+          country_id_ref?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_priority_partner?: boolean | null
+          is_verified?: boolean | null
+          logo_url?: string | null
+          name?: string
+          postal_code?: string | null
+          slug?: string | null
+          state?: string | null
+          street?: string | null
+          updated_at?: string
+          website?: string | null
+        }
+        Relationships: []
+      }
       job_applications: {
         Row: {
           applicant_id: string
@@ -1044,6 +1134,48 @@ export type Database = {
         }
         Relationships: []
       }
+      lawyer_articles: {
+        Row: {
+          content: string
+          cover_image_url: string | null
+          created_at: string
+          excerpt: string | null
+          id: string
+          is_published: boolean | null
+          lawyer_id: string
+          published_at: string | null
+          slug: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          content: string
+          cover_image_url?: string | null
+          created_at?: string
+          excerpt?: string | null
+          id?: string
+          is_published?: boolean | null
+          lawyer_id: string
+          published_at?: string | null
+          slug?: string | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          content?: string
+          cover_image_url?: string | null
+          created_at?: string
+          excerpt?: string | null
+          id?: string
+          is_published?: boolean | null
+          lawyer_id?: string
+          published_at?: string | null
+          slug?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       lawyer_contact_requests: {
         Row: {
           created_at: string | null
@@ -1134,6 +1266,81 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      lawyer_experiences: {
+        Row: {
+          company: string
+          created_at: string
+          description: string | null
+          end_date: string | null
+          id: string
+          is_current: boolean | null
+          lawyer_id: string
+          start_date: string
+          title: string
+        }
+        Insert: {
+          company: string
+          created_at?: string
+          description?: string | null
+          end_date?: string | null
+          id?: string
+          is_current?: boolean | null
+          lawyer_id: string
+          start_date: string
+          title: string
+        }
+        Update: {
+          company?: string
+          created_at?: string
+          description?: string | null
+          end_date?: string | null
+          id?: string
+          is_current?: boolean | null
+          lawyer_id?: string
+          start_date?: string
+          title?: string
+        }
+        Relationships: []
+      }
+      lawyer_qa_threads: {
+        Row: {
+          answer: string | null
+          answered_at: string | null
+          asked_by_name: string | null
+          asked_by_user_id: string | null
+          created_at: string
+          id: string
+          is_answered: boolean | null
+          is_public: boolean | null
+          lawyer_id: string
+          question: string
+        }
+        Insert: {
+          answer?: string | null
+          answered_at?: string | null
+          asked_by_name?: string | null
+          asked_by_user_id?: string | null
+          created_at?: string
+          id?: string
+          is_answered?: boolean | null
+          is_public?: boolean | null
+          lawyer_id: string
+          question: string
+        }
+        Update: {
+          answer?: string | null
+          answered_at?: string | null
+          asked_by_name?: string | null
+          asked_by_user_id?: string | null
+          created_at?: string
+          id?: string
+          is_answered?: boolean | null
+          is_public?: boolean | null
+          lawyer_id?: string
+          question?: string
+        }
+        Relationships: []
       }
       lawyer_ratings: {
         Row: {
@@ -1279,19 +1486,23 @@ export type Database = {
           created_at: string | null
           description: string | null
           email: string
+          firm_id_ref: string | null
           firm_logo_url: string | null
           firm_name: string | null
           hourly_rate: number | null
           id: string
           intro_video_url: string | null
           is_available: boolean | null
+          is_priority_partner: boolean | null
           is_verified: boolean | null
+          languages: string[] | null
           location: string | null
           name: string
           phone: string | null
           postal_code: string | null
           profile_views: number | null
           rating: number | null
+          response_time_label: string | null
           slug: string | null
           social_media: string | null
           specialization: string[] | null
@@ -1321,19 +1532,23 @@ export type Database = {
           created_at?: string | null
           description?: string | null
           email: string
+          firm_id_ref?: string | null
           firm_logo_url?: string | null
           firm_name?: string | null
           hourly_rate?: number | null
           id?: string
           intro_video_url?: string | null
           is_available?: boolean | null
+          is_priority_partner?: boolean | null
           is_verified?: boolean | null
+          languages?: string[] | null
           location?: string | null
           name: string
           phone?: string | null
           postal_code?: string | null
           profile_views?: number | null
           rating?: number | null
+          response_time_label?: string | null
           slug?: string | null
           social_media?: string | null
           specialization?: string[] | null
@@ -1363,19 +1578,23 @@ export type Database = {
           created_at?: string | null
           description?: string | null
           email?: string
+          firm_id_ref?: string | null
           firm_logo_url?: string | null
           firm_name?: string | null
           hourly_rate?: number | null
           id?: string
           intro_video_url?: string | null
           is_available?: boolean | null
+          is_priority_partner?: boolean | null
           is_verified?: boolean | null
+          languages?: string[] | null
           location?: string | null
           name?: string
           phone?: string | null
           postal_code?: string | null
           profile_views?: number | null
           rating?: number | null
+          response_time_label?: string | null
           slug?: string | null
           social_media?: string | null
           specialization?: string[] | null
@@ -1917,6 +2136,27 @@ export type Database = {
             referencedColumns: ["user_id"]
           },
         ]
+      }
+      saved_lawyers: {
+        Row: {
+          created_at: string
+          id: string
+          lawyer_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          lawyer_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          lawyer_id?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       serves: {
         Row: {
