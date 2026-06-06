@@ -6,41 +6,47 @@
 
 @layer base {
   :root {
-    /* Premium Dark Legal Theme — Gold Accent */
-    --background: 240 20% 4%;
-    --foreground: 240 10% 96%;
+    /* Dark Luxury Edition — Black / White / Gold */
+    /* #0a0a0a */
+    --background: 0 0% 4%;
+    --foreground: 0 0% 100%;
 
-    --card: 240 15% 8%;
-    --card-foreground: 240 10% 96%;
+    /* #141414 */
+    --card: 0 0% 8%;
+    --card-foreground: 0 0% 100%;
 
-    --popover: 240 15% 8%;
-    --popover-foreground: 240 10% 96%;
+    --popover: 0 0% 8%;
+    --popover-foreground: 0 0% 100%;
 
-    --primary: 42 60% 53%;
-    --primary-foreground: 240 20% 4%;
-    --primary-hover: 42 65% 45%;
+    /* gold #d4a843 */
+    --primary: 43 63% 55%;
+    --primary-foreground: 0 0% 0%;
+    --primary-hover: 43 71% 64%;
 
-    --secondary: 240 12% 12%;
-    --secondary-foreground: 240 10% 85%;
+    /* #1a1a1a */
+    --secondary: 0 0% 10%;
+    --secondary-foreground: 0 0% 100%;
 
-    --muted: 240 10% 14%;
-    --muted-foreground: 240 8% 55%;
+    /* #1a1a1a / #737373 */
+    --muted: 0 0% 10%;
+    --muted-foreground: 0 0% 64%;
 
-    --accent: 240 12% 14%;
-    --accent-foreground: 240 10% 90%;
+    --accent: 0 0% 10%;
+    --accent-foreground: 0 0% 100%;
 
-    --destructive: 0 72% 51%;
-    --destructive-foreground: 0 0% 98%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
 
-    --border: 240 10% 14%;
-    --input: 240 12% 12%;
-    --ring: 42 60% 53%;
+    /* #262626 / #1a1a1a */
+    --border: 0 0% 15%;
+    --input: 0 0% 10%;
+    --ring: 43 63% 55%;
 
     /* Gold Accent System */
-    --gold: 42 60% 53%;
-    --gold-foreground: 240 20% 4%;
-    --gold-muted: 42 30% 15%;
-    --gold-glow: 42 60% 53%;
+    --gold: 43 63% 55%;
+    --gold-foreground: 0 0% 0%;
+    --gold-muted: 43 50% 35%;
+    --gold-glow: 43 71% 64%;
 
     /* Status Colors */
     --status-pending: 35 80% 50%;
@@ -51,14 +57,14 @@
     --status-rejected-foreground: 0 0% 100%;
 
     /* Sidebar — Deep Dark */
-    --sidebar-background: 240 18% 7%;
-    --sidebar-foreground: 240 8% 55%;
-    --sidebar-primary: 42 60% 53%;
-    --sidebar-primary-foreground: 240 20% 4%;
-    --sidebar-accent: 240 12% 12%;
-    --sidebar-accent-foreground: 240 10% 92%;
-    --sidebar-border: 240 10% 12%;
-    --sidebar-ring: 42 60% 53%;
+    --sidebar-background: 0 0% 8%;
+    --sidebar-foreground: 0 0% 64%;
+    --sidebar-primary: 43 63% 55%;
+    --sidebar-primary-foreground: 0 0% 0%;
+    --sidebar-accent: 0 0% 10%;
+    --sidebar-accent-foreground: 0 0% 100%;
+    --sidebar-border: 0 0% 15%;
+    --sidebar-ring: 43 63% 55%;
 
     --radius: 0.75rem;
 
