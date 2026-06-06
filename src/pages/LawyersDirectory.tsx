@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
-import { Users, Search, Globe, MapPin, Send, Check, Loader2, Shield, Briefcase, Filter, Plus, TrendingUp, Star } from "lucide-react";
+import { Users, Search, Globe, MapPin, Send, Check, Loader2, Shield, Briefcase, Filter, Star, ArrowRight } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -32,6 +33,7 @@ interface LawyerRow {
 
 export default function LawyersDirectory() {
   const { user, profile } = useAuth();
+  const navigate = useNavigate();
   const userCountry = profile?.country;
   const { countryId } = useCountryId();
   const { countries } = useAllCountries();
@@ -66,9 +68,9 @@ export default function LawyersDirectory() {
 
   if (!userCountry) {
     return (
-      <div className="flex items-center justify-center h-full">
-        <div className="flex items-center gap-3 text-muted-foreground">
-          <Loader2 className="w-5 h-5 animate-spin text-primary" />
+      <div className="flex items-center justify-center h-full bg-[#0a0a0a]">
+        <div className="flex items-center gap-3 text-[#a3a3a3]">
+          <Loader2 className="w-5 h-5 animate-spin text-[#d4a843]" />
           <p>Loading your profile…</p>
         </div>
       </div>
@@ -152,214 +154,301 @@ export default function LawyersDirectory() {
   const uniqueCities = new Set(lawyers.map(l => l.city).filter(Boolean)).size;
 
   return (
-    <div className="h-full bg-background overflow-y-auto">
-      <div className="max-w-6xl mx-auto p-4 md:p-6">
-
-        {/* Hero Section */}
-        <div className="rounded-2xl border border-border/50 bg-card p-6 md:p-8 mb-6">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
-              <Users className="w-5 h-5 text-primary" />
+    <div className="h-full bg-[#0a0a0a] overflow-y-auto">
+      {/* Header Strip */}
+      <div className="sticky top-0 z-30 bg-[#0a0a0a]/95 backdrop-blur border-b border-[#262626]">
+        <div className="max-w-7xl mx-auto px-4 md:px-6 h-[72px] flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-9 h-9 rounded-xl bg-[#d4a843] flex items-center justify-center shrink-0">
+              <span className="text-black font-bold text-sm">J</span>
             </div>
-            <Badge variant="outline" className="text-xs border-primary/30 text-primary">
-              ✨ Trusted Legal Professionals
-            </Badge>
+            <div className="hidden sm:flex items-baseline gap-1">
+              <span className="text-white font-semibold tracking-tight">JURIST</span>
+              <span className="text-[#737373] font-medium tracking-tight">MIND</span>
+            </div>
+            <span className="hidden md:inline-block ml-3 pl-3 border-l border-[#262626] text-[11px] uppercase tracking-[0.15em] text-[#737373]">
+              Lawyers Directory
+            </span>
           </div>
+          {user && hasProfile === false && (
+            <RegisterLawyerDialog
+              onLawyerAdded={() => {
+                setHasProfile(true);
+                if (selectedCountryId) fetchLawyers(selectedCountryId);
+              }}
+            />
+          )}
+        </div>
+      </div>
 
-          <h1 className="text-2xl md:text-3xl font-bold text-foreground mb-2">
+      <div className="max-w-7xl mx-auto p-4 md:p-6">
+        {/* Hero */}
+        <div className="mb-8 pt-2">
+          <p className="text-[11px] uppercase tracking-[0.2em] text-[#737373] mb-3">
+            Verified Legal Professionals
+          </p>
+          <h1 className="text-3xl md:text-5xl font-semibold text-white tracking-tight" style={{ letterSpacing: "-0.02em" }}>
             Connect with a Lawyer
           </h1>
-          <p className="text-muted-foreground text-sm md:text-base max-w-2xl mb-6">
-            Discover verified legal professionals across {selectedCountryName}. Build lasting professional relationships with trusted lawyers.
+          <p className="mt-3 text-[#a3a3a3] text-sm md:text-base max-w-2xl leading-relaxed">
+            Discover trusted lawyers and firms across {selectedCountryName}. Vetted credentials, transparent ratings, direct contact.
           </p>
 
-          {/* Stats Row */}
-          <div className="flex flex-wrap gap-6">
-            <div className="flex items-center gap-2">
-              <div className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
-              <div>
-                <p className="text-sm font-semibold text-foreground">{onlineCount} Online</p>
-                <p className="text-xs text-muted-foreground">Available now</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <TrendingUp className="w-4 h-4 text-primary" />
-              <div>
-                <p className="text-sm font-semibold text-foreground">{topRatedCount} Top Rated</p>
-                <p className="text-xs text-muted-foreground">4.5+ stars</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <MapPin className="w-4 h-4 text-muted-foreground" />
-              <div>
-                <p className="text-sm font-semibold text-foreground">{uniqueCities} {uniqueCities === 1 ? "City" : "Cities"}</p>
-                <p className="text-xs text-muted-foreground">Nationwide coverage</p>
-              </div>
-            </div>
+          {/* Stat strip */}
+          <div className="mt-6 grid grid-cols-3 max-w-xl gap-px rounded-2xl overflow-hidden border border-[#262626] bg-[#262626]">
+            <Stat label="Online Now" value={onlineCount} accent dot />
+            <Stat label="Top Rated" value={topRatedCount} icon={<Star className="w-3.5 h-3.5 text-[#d4a843]" />} />
+            <Stat label={uniqueCities === 1 ? "City" : "Cities"} value={uniqueCities} icon={<MapPin className="w-3.5 h-3.5 text-[#737373]" />} />
           </div>
         </div>
 
-        {/* Search + Filters + Register Row */}
-        <div className="flex flex-col sm:flex-row gap-3 mb-6">
+        {/* Search Row */}
+        <div className="flex flex-col md:flex-row gap-3 mb-4">
           <div className="relative flex-1">
-            <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+            <Search className="w-4 h-4 absolute left-4 top-1/2 -translate-y-1/2 text-[#737373]" />
             <Input
               placeholder="Search by name, firm, or practice area..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10"
+              className="pl-11 h-12 rounded-full bg-[#141414] border-[#262626] text-white placeholder:text-[#737373] focus-visible:border-[#d4a843] focus-visible:ring-1 focus-visible:ring-[#d4a843]/30"
             />
           </div>
-          <div className="flex gap-2">
-            <Select value={selectedCountryId || ""} onValueChange={(v) => setSelectedCountryId(v)}>
-              <SelectTrigger className="w-40">
-                <Globe className="w-4 h-4 mr-1 text-muted-foreground" />
-                <SelectValue placeholder="Country" />
-              </SelectTrigger>
-              <SelectContent className="max-h-60">
-                {countries.map((c) => (
-                  <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Button variant="outline" onClick={() => setShowFilters(!showFilters)}>
-              <Filter className="w-4 h-4 mr-1" /> Filters
-            </Button>
-            {user && hasProfile === false && (
-              <RegisterLawyerDialog onLawyerAdded={() => { setHasProfile(true); if (selectedCountryId) fetchLawyers(selectedCountryId); }} />
-            )}
-          </div>
+          <Select value={selectedCountryId || ""} onValueChange={(v) => setSelectedCountryId(v)}>
+            <SelectTrigger className="md:w-52 h-12 rounded-full bg-[#141414] border-[#262626] text-white focus:ring-1 focus:ring-[#d4a843]/30">
+              <Globe className="w-4 h-4 mr-2 text-[#737373]" />
+              <SelectValue placeholder="Country" />
+            </SelectTrigger>
+            <SelectContent className="max-h-72 bg-[#141414] border-[#262626] text-white">
+              {countries.map((c) => (
+                <SelectItem key={c.id} value={c.id} className="focus:bg-[#1a1a1a] focus:text-white">
+                  {c.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Button
+            variant="outline"
+            onClick={() => setShowFilters(!showFilters)}
+            className="h-12 rounded-full bg-transparent border-[#333333] text-white hover:bg-[#1a1a1a] hover:border-[#d4a843] hover:text-white"
+          >
+            <Filter className="w-4 h-4 mr-2" /> Filters
+          </Button>
         </div>
 
         {/* Spec Filters */}
         {showFilters && allSpecs.length > 0 && (
-          <div className="flex flex-wrap gap-2 mb-6 p-4 rounded-xl border border-border/50 bg-card">
-            <span className="text-xs text-muted-foreground mr-2 self-center">Specializations:</span>
+          <div className="flex flex-wrap gap-2 mb-6 p-5 rounded-2xl border border-[#262626] bg-[#141414] animate-fade-in">
+            <span className="text-[11px] uppercase tracking-widest text-[#737373] mr-2 self-center">Practice Areas</span>
             {selectedSpec && (
-              <Badge variant="outline" className="cursor-pointer bg-primary/10 text-primary border-primary/30" onClick={() => setSelectedSpec(null)}>
+              <button
+                onClick={() => setSelectedSpec(null)}
+                className="text-xs px-3 py-1.5 rounded-lg bg-[#d4a843] text-black font-medium"
+              >
                 {selectedSpec} ✕
-              </Badge>
+              </button>
             )}
-            {allSpecs.filter((s) => s !== selectedSpec).slice(0, 12).map((s) => (
-              <Badge key={s} variant="outline" className="cursor-pointer hover:bg-primary/5 hover:border-primary/30 transition-colors" onClick={() => setSelectedSpec(s)}>
+            {allSpecs.filter((s) => s !== selectedSpec).slice(0, 18).map((s) => (
+              <button
+                key={s}
+                onClick={() => setSelectedSpec(s)}
+                className="text-xs px-3 py-1.5 rounded-lg bg-[#1a1a1a] text-[#a3a3a3] border border-[#262626] hover:border-[#d4a843] hover:text-white transition-colors"
+              >
                 {s}
-              </Badge>
+              </button>
             ))}
           </div>
         )}
 
         {user && hasProfile === false && (
-          <div className="mb-6 p-4 rounded-xl border border-primary/20 bg-primary/5">
-            <div className="flex items-center gap-3">
-              <Shield className="w-5 h-5 text-primary" />
-              <p className="text-sm font-medium text-foreground">
-                Are you a lawyer? Complete your profile to appear in the directory across {selectedCountryName}.
-              </p>
+          <div className="mb-6 p-5 rounded-2xl border-l-4 border-l-[#d4a843] border border-[#262626] bg-[#141414] flex items-center justify-between gap-4">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="w-10 h-10 rounded-xl bg-[#d4a843]/10 flex items-center justify-center shrink-0">
+                <Shield className="w-5 h-5 text-[#d4a843]" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-[10px] uppercase tracking-widest text-[#d4a843] font-bold">For Lawyers</p>
+                <p className="text-sm text-white mt-0.5 truncate">
+                  Claim your verified legal identity in {selectedCountryName}.
+                </p>
+              </div>
             </div>
+            <RegisterLawyerDialog
+              onLawyerAdded={() => {
+                setHasProfile(true);
+                if (selectedCountryId) fetchLawyers(selectedCountryId);
+              }}
+            />
           </div>
         )}
 
-        {/* Lawyers List */}
+        {/* Lawyers Grid */}
         {loading ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {[...Array(4)].map((_, i) => <Skeleton key={i} className="h-52 rounded-xl" />)}
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
+            {[...Array(6)].map((_, i) => (
+              <Skeleton key={i} className="h-64 rounded-2xl bg-[#1a1a1a]" />
+            ))}
           </div>
         ) : filtered.length === 0 ? (
-          <div className="text-center py-16">
-            <Users className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
-            <h3 className="text-lg font-semibold text-foreground mb-1">No verified lawyers</h3>
-            <p className="text-muted-foreground text-sm">
+          <div className="text-center py-20 rounded-2xl border border-[#262626] bg-[#141414]">
+            <div className="w-14 h-14 rounded-2xl bg-[#1a1a1a] border border-[#262626] mx-auto mb-4 flex items-center justify-center">
+              <Users className="w-6 h-6 text-[#737373]" />
+            </div>
+            <h3 className="text-lg font-semibold text-white mb-1">No verified lawyers</h3>
+            <p className="text-[#a3a3a3] text-sm">
               No verified lawyers listed in {selectedCountryName} yet.
             </p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {filtered.map((lawyer) => (
-              <div key={lawyer.id} className="p-5 rounded-xl border border-border/50 bg-card hover:border-primary/20 transition-colors group">
-                <div className="flex items-start justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-semibold text-sm">
-                      {lawyer.name.split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase()}
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
+            {filtered.map((lawyer) => {
+              const topRated = (lawyer.rating || 0) >= 4.5 && (lawyer.total_ratings || 0) >= 5;
+              const initials = lawyer.name.split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase();
+              return (
+                <div
+                  key={lawyer.id}
+                  onClick={() => navigate(`/lawyers/${lawyer.id}`)}
+                  className="group relative p-6 rounded-2xl border border-[#262626] bg-[#141414] hover:bg-[#1a1a1a] hover:border-[#333333] hover:-translate-y-0.5 transition-all duration-300 cursor-pointer flex flex-col"
+                >
+                  {topRated && (
+                    <div className="absolute top-4 right-4 inline-flex items-center gap-1 px-2 py-1 rounded-full bg-[#d4a843]/10 border border-[#d4a843]/30">
+                      <Star className="w-3 h-3 fill-[#d4a843] text-[#d4a843]" />
+                      <span className="text-[10px] font-bold text-[#d4a843] uppercase tracking-wider">Top</span>
                     </div>
-                    <div>
-                      <h3 className="font-semibold text-foreground">{lawyer.name}</h3>
-                      {lawyer.city && (
-                        <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
-                          <MapPin className="w-3 h-3" /> {lawyer.city}
-                        </p>
+                  )}
+
+                  <div className="flex items-start gap-4">
+                    <div className="w-14 h-14 rounded-2xl bg-[#1a1a1a] ring-2 ring-[#262626] flex items-center justify-center text-white font-semibold text-base shrink-0">
+                      {initials}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <h3 className="font-semibold text-white truncate" style={{ letterSpacing: "-0.01em" }}>
+                        {lawyer.name}
+                      </h3>
+                      <div className="flex items-center gap-2 mt-1 text-xs">
+                        {(lawyer.rating || 0) > 0 ? (
+                          <span className="flex items-center gap-1">
+                            <Star className="w-3 h-3 fill-[#d4a843] text-[#d4a843]" />
+                            <span className="text-white font-semibold">{lawyer.rating?.toFixed(1)}</span>
+                            <span className="text-[#737373]">({lawyer.total_ratings})</span>
+                          </span>
+                        ) : (
+                          <span className="text-[#737373]">New profile</span>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-3 mt-1 text-xs text-[#a3a3a3]">
+                        {lawyer.city && (
+                          <span className="flex items-center gap-1">
+                            <MapPin className="w-3 h-3 text-[#737373]" /> {lawyer.city}
+                          </span>
+                        )}
+                        {lawyer.years_experience > 0 && (
+                          <span className="flex items-center gap-1">
+                            <Briefcase className="w-3 h-3 text-[#737373]" /> {lawyer.years_experience}y
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {lawyer.specialization?.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5 mt-4">
+                      {lawyer.specialization.slice(0, 3).map((s) => (
+                        <span
+                          key={s}
+                          className="text-xs font-medium px-3 py-1.5 rounded-lg bg-[#1a1a1a] text-[#a3a3a3] border border-[#262626] group-hover:border-[#333333]"
+                        >
+                          {s}
+                        </span>
+                      ))}
+                      {lawyer.specialization.length > 3 && (
+                        <span className="text-xs font-medium px-3 py-1.5 rounded-lg bg-[#1a1a1a] text-[#737373] border border-[#262626]">
+                          +{lawyer.specialization.length - 3}
+                        </span>
                       )}
                     </div>
-                  </div>
-                  <Badge variant="outline" className="bg-emerald-500/10 text-emerald-400 border-emerald-500/20 text-xs">
-                    <Shield className="w-3 h-3 mr-1" /> Verified
-                  </Badge>
-                </div>
+                  )}
 
-                {lawyer.specialization?.length > 0 && (
-                  <div className="flex flex-wrap gap-1.5 mt-3">
-                    {lawyer.specialization.slice(0, 3).map((s) => (
-                      <Badge key={s} variant="secondary" className="text-xs">{s}</Badge>
-                    ))}
-                    {lawyer.specialization.length > 3 && (
-                      <Badge variant="secondary" className="text-xs">+{lawyer.specialization.length - 3}</Badge>
+                  {lawyer.description && (
+                    <p className="text-sm text-[#a3a3a3] mt-4 line-clamp-2 leading-relaxed">
+                      {lawyer.description}
+                    </p>
+                  )}
+
+                  <div className="mt-5 pt-5 border-t border-[#262626] flex items-center gap-2">
+                    {sentRequests.has(lawyer.id) ? (
+                      <Button
+                        size="sm"
+                        disabled
+                        className="flex-1 h-10 rounded-xl bg-[#1a1a1a] text-[#22c55e] border border-[#22c55e]/20 hover:bg-[#1a1a1a]"
+                      >
+                        <Check className="w-4 h-4 mr-1.5" /> Request Sent
+                      </Button>
+                    ) : (
+                      <Button
+                        size="sm"
+                        onClick={(e) => { e.stopPropagation(); setConnectingLawyer(lawyer); }}
+                        className="flex-1 h-10 rounded-xl bg-[#d4a843] text-black font-semibold hover:bg-[#e6c060] active:scale-[0.98] transition-all"
+                      >
+                        <Send className="w-4 h-4 mr-1.5" /> Connect
+                      </Button>
                     )}
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={(e) => { e.stopPropagation(); navigate(`/lawyers/${lawyer.id}`); }}
+                      className="h-10 rounded-xl bg-transparent border-[#333333] text-white hover:bg-[#1a1a1a] hover:border-[#d4a843] hover:text-white"
+                    >
+                      View <ArrowRight className="w-4 h-4 ml-1" />
+                    </Button>
                   </div>
-                )}
-
-                <div className="flex items-center gap-4 mt-3 text-xs text-muted-foreground">
-                  {lawyer.years_experience > 0 && (
-                    <span className="flex items-center gap-1">
-                      <Briefcase className="w-3 h-3" /> {lawyer.years_experience} yrs
-                    </span>
-                  )}
-                  {lawyer.hourly_rate && <span>₦{lawyer.hourly_rate.toLocaleString()}/hr</span>}
-                  {(lawyer.rating || 0) > 0 && (
-                    <span className="flex items-center gap-1">
-                      <Star className="w-3 h-3 fill-primary text-primary" /> {lawyer.rating?.toFixed(1)} ({lawyer.total_ratings})
-                    </span>
-                  )}
                 </div>
-
-                {lawyer.description && (
-                  <p className="text-sm text-muted-foreground mt-2 line-clamp-2">{lawyer.description}</p>
-                )}
-
-                <div className="mt-4">
-                  {sentRequests.has(lawyer.id) ? (
-                    <Button variant="outline" size="sm" disabled>
-                      <Check className="w-4 h-4 mr-1" /> Request Sent
-                    </Button>
-                  ) : (
-                    <Button size="sm" className="bg-primary text-primary-foreground hover:bg-primary/90" onClick={() => setConnectingLawyer(lawyer)}>
-                      <Send className="w-4 h-4 mr-1" /> Connect
-                    </Button>
-                  )}
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
 
         {/* Connect Dialog */}
         <Dialog open={!!connectingLawyer} onOpenChange={(o) => !o && setConnectingLawyer(null)}>
-          <DialogContent>
+          <DialogContent className="bg-[#141414] border border-[#262626] text-white rounded-2xl">
             <DialogHeader>
-              <DialogTitle>Connect with {connectingLawyer?.name}</DialogTitle>
+              <DialogTitle className="text-white" style={{ letterSpacing: "-0.01em" }}>
+                Connect with {connectingLawyer?.name}
+              </DialogTitle>
             </DialogHeader>
             <Textarea
-              placeholder="Write a message..."
+              placeholder="Briefly describe what you need help with..."
               value={connectMessage}
               onChange={(e) => setConnectMessage(e.target.value)}
-              className="min-h-[100px]"
+              className="min-h-[120px] bg-[#1a1a1a] border-[#262626] text-white placeholder:text-[#737373] rounded-xl focus-visible:border-[#d4a843] focus-visible:ring-1 focus-visible:ring-[#d4a843]/30"
             />
-            <Button onClick={handleConnect} disabled={submitting} className="bg-primary text-primary-foreground hover:bg-primary/90">
+            <Button
+              onClick={handleConnect}
+              disabled={submitting}
+              className="h-12 rounded-xl bg-[#d4a843] text-black font-semibold hover:bg-[#e6c060] active:scale-[0.98] transition-all"
+            >
               {submitting ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Send className="w-4 h-4 mr-2" />}
               Send Request
             </Button>
           </DialogContent>
         </Dialog>
-
       </div>
+    </div>
+  );
+}
+
+function Stat({
+  label, value, icon, accent, dot,
+}: { label: string; value: number; icon?: React.ReactNode; accent?: boolean; dot?: boolean }) {
+  return (
+    <div className="bg-[#141414] p-4 flex flex-col gap-1">
+      <div className="flex items-center gap-1.5">
+        {dot && <span className="w-2 h-2 rounded-full bg-[#22c55e] animate-pulse" />}
+        {icon}
+        <span className="text-[10px] uppercase tracking-widest text-[#737373] font-medium">{label}</span>
+      </div>
+      <span className={`text-2xl font-semibold ${accent ? "text-[#22c55e]" : "text-white"}`} style={{ letterSpacing: "-0.02em" }}>
+        {value}
+      </span>
     </div>
   );
 }
