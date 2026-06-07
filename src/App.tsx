@@ -31,6 +31,7 @@ import SharedChatView from "./pages/SharedChatView";
 import Admin from "./pages/Admin";
 import Join from "./pages/Join";
 import FirmProfilePage from "./pages/FirmProfilePage";
+import PendingApproval from "./pages/PendingApproval";
 
 const queryClient = new QueryClient();
 
@@ -160,6 +161,7 @@ const App = () => (
             <Route path="/share/:token" element={<SharedChatView />} />
             <Route path="/onboarding" element={<OnboardingRoute />} />
             <Route path="/join" element={<Join />} />
+            <Route path="/pending-approval" element={<PendingApproval />} />
 
             {/* Public lawyer profile (SEO indexable, no auth required) */}
             <Route path="/lawyers/:slug" element={<LawyerProfilePage />} />
