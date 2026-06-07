@@ -269,12 +269,12 @@ export default function LawyersDirectory() {
                 </p>
               </div>
             </div>
-            <RegisterLawyerDialog
-              onLawyerAdded={() => {
-                setHasProfile(true);
-                if (selectedCountryId) fetchLawyers(selectedCountryId);
-              }}
-            />
+            <Button
+              onClick={() => navigate("/join")}
+              className="h-10 rounded-full bg-[#d4a843] text-black hover:bg-[#e8c566] active:scale-[0.97] font-semibold text-xs px-5 shrink-0"
+            >
+              Join as a Lawyer
+            </Button>
           </div>
         )}
 
