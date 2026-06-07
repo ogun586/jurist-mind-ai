@@ -1,4 +1,4 @@
-import { User, Settings, LogOut } from "lucide-react";
+import { User, Settings, LogOut, Scale } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import {
@@ -31,6 +31,13 @@ export function TopHeader() {
 
       {/* Right — notifications + avatar */}
       <div className="flex items-center gap-2">
+        {/* Join as a Lawyer — always visible */}
+        <Button
+          onClick={() => navigate("/join")}
+          className="hidden md:inline-flex h-9 rounded-full bg-[#d4a843] text-black hover:bg-[#e8c566] active:scale-[0.97] font-semibold text-xs px-5"
+        >
+          <Scale className="w-3.5 h-3.5 mr-1.5" /> Join as a Lawyer
+        </Button>
         {user ? (
           <>
             {/* Bell */}
