@@ -6,7 +6,7 @@ const corsHeaders = {
 };
 
 const ADMIN_EMAIL = "ogunseun7@gmail.com";
-const FROM_EMAIL = "JuristMind <onboarding@resend.dev>";
+const FROM_EMAIL = "JuristMind <joy@auth.juristmind.com>";
 
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
