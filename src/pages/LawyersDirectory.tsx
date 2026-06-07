@@ -12,7 +12,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useCountryId, useAllCountries } from "@/hooks/useCountryId";
 import { toast } from "sonner";
-import { RegisterLawyerDialog } from "@/components/lawyers/RegisterLawyerDialog";
 
 interface LawyerRow {
   id: string;
@@ -170,14 +169,12 @@ export default function LawyersDirectory() {
               Lawyers Directory
             </span>
           </div>
-          {user && hasProfile === false && (
-            <RegisterLawyerDialog
-              onLawyerAdded={() => {
-                setHasProfile(true);
-                if (selectedCountryId) fetchLawyers(selectedCountryId);
-              }}
-            />
-          )}
+          <Button
+            onClick={() => navigate("/join")}
+            className="h-9 rounded-full bg-[#d4a843] text-black hover:bg-[#e8c566] active:scale-[0.97] font-semibold text-xs px-5"
+          >
+            Join as a Lawyer
+          </Button>
         </div>
       </div>
 
@@ -272,12 +269,12 @@ export default function LawyersDirectory() {
                 </p>
               </div>
             </div>
-            <RegisterLawyerDialog
-              onLawyerAdded={() => {
-                setHasProfile(true);
-                if (selectedCountryId) fetchLawyers(selectedCountryId);
-              }}
-            />
+            <Button
+              onClick={() => navigate("/join")}
+              className="h-10 rounded-full bg-[#d4a843] text-black hover:bg-[#e8c566] active:scale-[0.97] font-semibold text-xs px-5 shrink-0"
+            >
+              Join as a Lawyer
+            </Button>
           </div>
         )}
 

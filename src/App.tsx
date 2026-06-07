@@ -31,6 +31,7 @@ import SharedChatView from "./pages/SharedChatView";
 import Admin from "./pages/Admin";
 import Join from "./pages/Join";
 import FirmProfilePage from "./pages/FirmProfilePage";
+import PendingApproval from "./pages/PendingApproval";
 
 const queryClient = new QueryClient();
 
@@ -119,7 +120,7 @@ function ProtectedLayout() {
         <JuristSidebar />
         <div className="flex-1 flex flex-col overflow-hidden">
           <TopHeader />
-          <main className="flex-1 overflow-hidden">
+          <main className="flex-1 overflow-hidden pb-16 md:pb-0">
             <Routes>
               <Route path="/" element={<Index />} />
               <Route path="/chat/:sessionId" element={<Index />} />
@@ -140,6 +141,15 @@ function ProtectedLayout() {
               <Route path="*" element={<NotFound />} />
             </Routes>
           </main>
+          {/* Mobile sticky "Join as a Lawyer" CTA */}
+          <a
+            href="/join"
+            className="md:hidden fixed bottom-0 inset-x-0 z-40 bg-[#0a0a0a]/95 backdrop-blur border-t border-[#262626] px-4 py-3"
+          >
+            <div className="w-full h-12 rounded-xl bg-[#d4a843] text-black flex items-center justify-center font-semibold text-sm active:scale-[0.98] transition-transform">
+              Join as a Lawyer
+            </div>
+          </a>
         </div>
       </div>
     </SidebarProvider>
@@ -160,6 +170,7 @@ const App = () => (
             <Route path="/share/:token" element={<SharedChatView />} />
             <Route path="/onboarding" element={<OnboardingRoute />} />
             <Route path="/join" element={<Join />} />
+            <Route path="/pending-approval" element={<PendingApproval />} />
 
             {/* Public lawyer profile (SEO indexable, no auth required) */}
             <Route path="/lawyers/:slug" element={<LawyerProfilePage />} />

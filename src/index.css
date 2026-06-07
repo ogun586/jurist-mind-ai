@@ -108,17 +108,29 @@
    GLOBAL SCROLLBAR — Gold tinted
    ============================================ */
 ::-webkit-scrollbar {
-  width: 4px;
+  width: 6px;
+  height: 6px;
 }
 ::-webkit-scrollbar-track {
-  background: transparent;
+  background: #0a0a0a;
 }
 ::-webkit-scrollbar-thumb {
-  background: hsla(42, 60%, 53%, 0.25);
-  border-radius: 9999px;
+  background: #333333;
+  border-radius: 3px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: hsla(42, 60%, 53%, 0.5);
+  background: #444444;
+}
+
+/* Selection — luxury gold */
+::selection {
+  background: rgba(212,168,67,0.3);
+  color: #ffffff;
+}
+
+/* Remove default blue focus rings globally */
+*:focus-visible {
+  outline: none;
 }
 
 /* ============================================
