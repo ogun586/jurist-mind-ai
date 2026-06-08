@@ -151,12 +151,14 @@ serve(async (req) => {
           });
         }
 
-        console.log('Registering lawyer for user:', user.id, 'with data:', lawyerData);
+        const { is_verified: _ignoredIsVerified, ...safeLawyerData } = lawyerData || {};
+
+        console.log('Registering lawyer for user:', user.id, 'with data:', safeLawyerData);
 
         const { data, error } = await supabaseClient
           .from('lawyers')
           .insert({
-            ...lawyerData,
+            ...safeLawyerData,
             user_id: user.id,
             verified: false,
             verification_status: 'pending',
@@ -198,9 +200,11 @@ serve(async (req) => {
           });
         }
 
+        const { is_verified: _ignoredIsVerified, ...safeLawyerData } = lawyerData || {};
+
         const { data, error } = await supabaseClient
           .from('lawyers')
-          .update(lawyerData)
+          .update(safeLawyerData)
           .eq('user_id', user.id)
           .select()
           .single();

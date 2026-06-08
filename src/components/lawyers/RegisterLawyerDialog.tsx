@@ -72,7 +72,7 @@ export function RegisterLawyerDialog({ onLawyerAdded }: RegisterLawyerDialogProp
     bar_number: "",
     social_media: "",
     website: "",
-    brand_accent_color: "#1e40af",
+    brand_accent_color: "#d4a843",
     bio_about: "",
     bio_approach: ""
   });
@@ -132,42 +132,49 @@ export function RegisterLawyerDialog({ onLawyerAdded }: RegisterLawyerDialogProp
     setUploadProgress(0);
 
     try {
-      let avatarUrl: string | null = null;
-      let credentialPath: string | null = null;
+      setUploadProgress(15);
+      const safeExt = (file: File) => file.name.split('.').pop()?.toLowerCase().replace(/[^a-z0-9]/g, '') || 'bin';
+      const stamp = Date.now();
+      const uploadJobs: Promise<{ type: 'avatar' | 'credential'; path: string; file: File }>[] = [];
 
-      // Upload avatar if provided
       if (avatarFile) {
-        setUploadProgress(10);
-        const avatarExt = avatarFile.name.split('.').pop();
-        const avatarPath = `${user.id}/avatar.${avatarExt}`;
-        
-        const { error: avatarError } = await supabase.storage
-          .from('lawyer-assets')
-          .upload(avatarPath, avatarFile, { upsert: true });
-
-        if (avatarError) throw avatarError;
-
-        const { data: { publicUrl } } = supabase.storage
-          .from('lawyer-assets')
-          .getPublicUrl(avatarPath);
-        
-        avatarUrl = publicUrl;
-        setUploadProgress(30);
+        const avatarPath = `${user.id}/avatar-${stamp}.${safeExt(avatarFile)}`;
+        uploadJobs.push(
+          supabase.storage.from('lawyer-assets').upload(avatarPath, avatarFile).then(({ error }) => {
+            if (error) throw new Error(`Avatar upload failed: ${error.message}`);
+            return { type: 'avatar' as const, path: avatarPath, file: avatarFile };
+          })
+        );
       }
 
-      // Upload credential if provided
       if (credentialFile) {
-        setUploadProgress(50);
-        const credExt = credentialFile.name.split('.').pop();
-        credentialPath = `${user.id}/bar-license.${credExt}`;
-        
-        const { error: credError } = await supabase.storage
-          .from('lawyer-credentials')
-          .upload(credentialPath, credentialFile, { upsert: true });
-
-        if (credError) throw credError;
-        setUploadProgress(70);
+        const credentialPath = `${user.id}/bar-license-${stamp}.${safeExt(credentialFile)}`;
+        uploadJobs.push(
+          supabase.storage.from('lawyer-credentials').upload(credentialPath, credentialFile).then(({ error }) => {
+            if (error) throw new Error(`Credential upload failed: ${error.message}`);
+            return { type: 'credential' as const, path: credentialPath, file: credentialFile };
+          })
+        );
       }
+
+      const uploadResults = await Promise.allSettled(uploadJobs);
+      let avatarUrl: string | null = null;
+      let credentialUpload: { path: string; file: File } | null = null;
+
+      uploadResults.forEach((result) => {
+        if (result.status === 'fulfilled') {
+          if (result.value.type === 'avatar') {
+            const { data: { publicUrl } } = supabase.storage.from('lawyer-assets').getPublicUrl(result.value.path);
+            avatarUrl = publicUrl;
+          } else {
+            credentialUpload = { path: result.value.path, file: result.value.file };
+          }
+        } else {
+          console.warn('Optional upload warning:', result.reason);
+        }
+      });
+
+      setUploadProgress(60);
 
       // Register lawyer profile
       const bioStructured = {
@@ -176,55 +183,65 @@ export function RegisterLawyerDialog({ onLawyerAdded }: RegisterLawyerDialogProp
         case_studies: []
       };
 
-      const { data, error } = await supabase.functions.invoke('search-lawyers', {
-        body: {
-          action: 'register',
-          lawyerData: {
-            name: form.name,
-            email: form.email,
-            phone: form.phone,
-            state: form.state,
-            city: form.city,
-            street: form.street,
-            postal_code: form.postal_code,
-            country: countries.find(c => c.id === selectedCountryId)?.name || null,
-            country_id_ref: selectedCountryId,
-            firm_name: form.firm_name,
-            description: form.description,
-            specialization: form.specialization,
-            years_experience: Number(form.years_experience) || 0,
-            bar_number: form.bar_number,
-            social_media: form.social_media,
-            website: form.website,
-            brand_accent_color: form.brand_accent_color,
-            bio_structured: bioStructured,
-            avatar_url: avatarUrl,
-            verification_status: 'pending',
-            availability_status: 'offline'
-          }
-        }
-      });
+      const { data: existing, error: existingError } = await supabase
+        .from('lawyers')
+        .select('id')
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+      if (existingError) throw existingError;
+      if (existing) throw new Error('You already have a lawyer profile registered');
+
+      const { data, error } = await supabase
+        .from('lawyers')
+        .insert({
+          user_id: user.id,
+          name: form.name,
+          email: form.email,
+          phone: form.phone,
+          state: form.state,
+          city: form.city,
+          street: form.street || null,
+          postal_code: form.postal_code || null,
+          country: countries.find(c => c.id === selectedCountryId)?.name || null,
+          country_id_ref: selectedCountryId,
+          firm_name: form.firm_name || null,
+          description: form.description,
+          specialization: form.specialization,
+          years_experience: Number(form.years_experience) || 0,
+          bar_number: form.bar_number,
+          social_media: form.social_media || null,
+          website: form.website || null,
+          brand_accent_color: form.brand_accent_color || '#d4a843',
+          bio_structured: bioStructured,
+          avatar_url: avatarUrl,
+          verified: false,
+          verification_status: 'pending',
+          availability_status: 'offline'
+        })
+        .select()
+        .single();
 
       if (error) throw error;
-      if ((data as any)?.error) throw new Error((data as any).error);
       setUploadProgress(90);
 
       // Create credential record if file was uploaded
-      if (credentialPath && data?.data?.id) {
-        const { error: credRecordError } = await supabase
-          .from('lawyer_credentials')
-          .insert({
-            lawyer_id: data.data.id,
-            credential_type: 'bar_license',
-            file_name: credentialFile!.name,
-            file_path: credentialPath,
-            file_size: credentialFile!.size,
-            mime_type: credentialFile!.type,
-            status: 'pending'
-          });
-
-        if (credRecordError) console.error('Credential record error:', credRecordError);
+      if (credentialUpload && data?.id) {
+        supabase.from('lawyer_credentials').insert({
+          lawyer_id: data.id,
+          credential_type: 'bar_license',
+          file_name: credentialUpload.file.name,
+          file_path: credentialUpload.path,
+          file_size: credentialUpload.file.size,
+          mime_type: credentialUpload.file.type,
+          status: 'pending'
+        }).then(({ error: credRecordError }) => {
+          if (credRecordError) console.error('Credential record error:', credRecordError);
+        });
       }
+
+      supabase.functions.invoke('notify-admin-lawyer-signup', { body: { lawyer: data } })
+        .catch((notifyError) => console.error('Admin notify failed:', notifyError));
 
       setUploadProgress(100);
       toast.success('Profile submitted for verification! Our team will review and contact you.');
@@ -260,7 +277,7 @@ export function RegisterLawyerDialog({ onLawyerAdded }: RegisterLawyerDialogProp
       bar_number: "",
       social_media: "",
       website: "",
-      brand_accent_color: "#1e40af",
+      brand_accent_color: "#d4a843",
       bio_about: "",
       bio_approach: ""
     });
