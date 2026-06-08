@@ -200,40 +200,66 @@ export default function Join() {
         .filter(Boolean)
         .join(' | ');
 
-      const { data, error } = await supabase.functions.invoke('search-lawyers', {
-        body: {
-          action: 'register',
-          lawyerData: {
-            name: form.name,
-            email: form.email,
-            phone: form.phone,
-            state: form.state,
-            city: form.city,
-            street: form.street,
-            postal_code: form.postal_code,
-            country: countryName,
-            country_id_ref: form.country_id,
-            firm_name: form.account_type === 'firm' ? form.firm_name : '',
-            description: form.description,
-            specialization: form.specialization,
-            years_experience: Number(form.years_experience) || 0,
-            bar_number: form.bar_number,
-            social_media: socialMedia,
-            website: form.website,
-            brand_accent_color: form.brand_accent_color,
-            avatar_url: avatarUrl,
-            verification_status: 'pending',
-            availability_status: 'offline',
-          },
-        },
-      });
+      // Practice areas — normalize to array (handles legacy string drafts too)
+      const practiceAreasArray = Array.isArray(form.specialization)
+        ? form.specialization
+        : String(form.specialization || '')
+            .split(/[,;]/)
+            .map((s) => s.trim())
+            .filter(Boolean);
 
-      if (error) throw error;
-      if ((data as any)?.error) throw new Error((data as any).error);
+      // Prevent duplicate profile for same user
+      const { data: existing } = await supabase
+        .from('lawyers')
+        .select('id')
+        .eq('user_id', user.id)
+        .maybeSingle();
 
-      if (credentialPath && (data as any)?.data?.id) {
+      if (existing) {
+        toast.error('You already have a lawyer profile registered.');
+        setSubmitting(false);
+        return;
+      }
+
+      // Direct insert into lawyers table — RLS allows authenticated user to insert own row
+      const { data, error } = await supabase
+        .from('lawyers')
+        .insert({
+          user_id: user.id,
+          name: form.name,
+          email: form.email,
+          phone: form.phone,
+          state: form.state,
+          city: form.city,
+          street: form.street,
+          postal_code: form.postal_code,
+          country: countryName,
+          country_id_ref: form.country_id || null,
+          firm_name: form.account_type === 'firm' ? form.firm_name : null,
+          description: form.description,
+          specialization: practiceAreasArray,
+          years_experience: Number(form.years_experience) || 0,
+          bar_number: form.bar_number,
+          social_media: socialMedia,
+          website: form.website,
+          brand_accent_color: form.brand_accent_color,
+          avatar_url: avatarUrl,
+          verified: false,
+          is_verified: false,
+          verification_status: 'pending',
+          availability_status: 'offline',
+        })
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Lawyer insert error:', error);
+        throw new Error(error.message || 'Failed to save profile');
+      }
+
+      if (credentialPath && data?.id) {
         await supabase.from('lawyer_credentials').insert({
-          lawyer_id: (data as any).data.id,
+          lawyer_id: data.id,
           credential_type: 'bar_license',
           file_name: credentialFile!.name,
           file_path: credentialPath,
@@ -242,6 +268,11 @@ export default function Join() {
           status: 'pending',
         });
       }
+
+      // Fire-and-forget admin notification
+      supabase.functions
+        .invoke('notify-admin-lawyer-signup', { body: { lawyer: data } })
+        .catch((err) => console.error('Admin notify failed:', err));
 
       localStorage.removeItem('jurist_join_draft');
       toast.success('Application submitted!');
@@ -377,8 +408,14 @@ export default function Join() {
                   <Input className={inputClass} type="number" min={0} value={form.years_experience} onChange={(e) => setForm({ ...form, years_experience: Number(e.target.value) })} />
                 </Field>
               </div>
-              <Field label="Practice Areas (comma-separated)">
-                <Input className={inputClass} value={form.specialization.join(', ')} onChange={(e) => setForm({ ...form, specialization: e.target.value.split(',').map((s) => s.trim()).filter(Boolean) })} placeholder="e.g. Corporate, Litigation, Human Rights" />
+              <Field label="Practice Areas">
+                <PracticeAreasInput
+                  tags={form.specialization}
+                  onChange={(tags) => setForm({ ...form, specialization: tags })}
+                />
+                <p className="text-[11px] text-[#737373] mt-2">
+                  Press Enter, comma, or semicolon to add. Click × to remove.
+                </p>
               </Field>
               <Field label="Short Bio">
                 <Textarea rows={4} className={`${inputClass} h-auto min-h-[120px] py-3`} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder="A brief introduction shown on your public profile..." />
@@ -581,6 +618,80 @@ function ReviewRow({ label, value }: { label: string; value: string }) {
     <div className="flex items-start justify-between gap-4 py-2 border-b border-[#262626] last:border-0">
       <span className="text-[#737373] uppercase tracking-widest text-[10px]">{label}</span>
       <span className="text-white text-right">{value || '—'}</span>
+    </div>
+  );
+}
+
+function PracticeAreasInput({
+  tags,
+  onChange,
+}: {
+  tags: string[];
+  onChange: (next: string[]) => void;
+}) {
+  const [inputValue, setInputValue] = useState('');
+
+  const addFromString = (raw: string) => {
+    const parts = raw
+      .split(/[,;]/)
+      .map((t) => t.trim())
+      .filter((t) => t.length > 0);
+    if (!parts.length) return;
+    const next = [...tags];
+    for (const p of parts) {
+      if (!next.some((t) => t.toLowerCase() === p.toLowerCase())) next.push(p);
+    }
+    onChange(next);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter' || e.key === ',' || e.key === ';') {
+      e.preventDefault();
+      if (inputValue.trim()) {
+        addFromString(inputValue);
+        setInputValue('');
+      }
+    } else if (e.key === 'Backspace' && !inputValue && tags.length) {
+      onChange(tags.slice(0, -1));
+    }
+  };
+
+  const handleBlur = () => {
+    if (inputValue.trim()) {
+      addFromString(inputValue);
+      setInputValue('');
+    }
+  };
+
+  const remove = (t: string) => onChange(tags.filter((x) => x !== t));
+
+  return (
+    <div className="flex flex-wrap gap-2 p-3 bg-[#1a1a1a] border border-[#262626] rounded-xl min-h-[48px] focus-within:border-[#d4a843] focus-within:ring-1 focus-within:ring-[#d4a843]/30 transition-colors">
+      {tags.map((tag) => (
+        <span
+          key={tag}
+          className="bg-[#d4a843]/10 text-[#d4a843] border border-[#d4a843]/30 rounded-full px-3 py-1 text-xs font-medium flex items-center gap-1.5"
+        >
+          {tag}
+          <button
+            type="button"
+            onClick={() => remove(tag)}
+            className="hover:text-white transition-colors"
+            aria-label={`Remove ${tag}`}
+          >
+            <X className="w-3 h-3" />
+          </button>
+        </span>
+      ))}
+      <input
+        type="text"
+        value={inputValue}
+        onChange={(e) => setInputValue(e.target.value)}
+        onKeyDown={handleKeyDown}
+        onBlur={handleBlur}
+        placeholder={tags.length ? '' : 'e.g. Corporate Law, Criminal Law, Family Law'}
+        className="bg-transparent text-white text-sm flex-1 min-w-[140px] outline-none placeholder:text-[#737373]"
+      />
     </div>
   );
 }
