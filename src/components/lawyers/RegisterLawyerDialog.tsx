@@ -277,7 +277,7 @@ export function RegisterLawyerDialog({ onLawyerAdded }: RegisterLawyerDialogProp
       bar_number: "",
       social_media: "",
       website: "",
-      brand_accent_color: "#1e40af",
+      brand_accent_color: "#d4a843",
       bio_about: "",
       bio_approach: ""
     });
