@@ -200,40 +200,66 @@ export default function Join() {
         .filter(Boolean)
         .join(' | ');
 
-      const { data, error } = await supabase.functions.invoke('search-lawyers', {
-        body: {
-          action: 'register',
-          lawyerData: {
-            name: form.name,
-            email: form.email,
-            phone: form.phone,
-            state: form.state,
-            city: form.city,
-            street: form.street,
-            postal_code: form.postal_code,
-            country: countryName,
-            country_id_ref: form.country_id,
-            firm_name: form.account_type === 'firm' ? form.firm_name : '',
-            description: form.description,
-            specialization: form.specialization,
-            years_experience: Number(form.years_experience) || 0,
-            bar_number: form.bar_number,
-            social_media: socialMedia,
-            website: form.website,
-            brand_accent_color: form.brand_accent_color,
-            avatar_url: avatarUrl,
-            verification_status: 'pending',
-            availability_status: 'offline',
-          },
-        },
-      });
+      // Practice areas — normalize to array (handles legacy string drafts too)
+      const practiceAreasArray = Array.isArray(form.specialization)
+        ? form.specialization
+        : String(form.specialization || '')
+            .split(/[,;]/)
+            .map((s) => s.trim())
+            .filter(Boolean);
 
-      if (error) throw error;
-      if ((data as any)?.error) throw new Error((data as any).error);
+      // Prevent duplicate profile for same user
+      const { data: existing } = await supabase
+        .from('lawyers')
+        .select('id')
+        .eq('user_id', user.id)
+        .maybeSingle();
 
-      if (credentialPath && (data as any)?.data?.id) {
+      if (existing) {
+        toast.error('You already have a lawyer profile registered.');
+        setSubmitting(false);
+        return;
+      }
+
+      // Direct insert into lawyers table — RLS allows authenticated user to insert own row
+      const { data, error } = await supabase
+        .from('lawyers')
+        .insert({
+          user_id: user.id,
+          name: form.name,
+          email: form.email,
+          phone: form.phone,
+          state: form.state,
+          city: form.city,
+          street: form.street,
+          postal_code: form.postal_code,
+          country: countryName,
+          country_id_ref: form.country_id || null,
+          firm_name: form.account_type === 'firm' ? form.firm_name : null,
+          description: form.description,
+          specialization: practiceAreasArray,
+          years_experience: Number(form.years_experience) || 0,
+          bar_number: form.bar_number,
+          social_media: socialMedia,
+          website: form.website,
+          brand_accent_color: form.brand_accent_color,
+          avatar_url: avatarUrl,
+          verified: false,
+          is_verified: false,
+          verification_status: 'pending',
+          availability_status: 'offline',
+        })
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Lawyer insert error:', error);
+        throw new Error(error.message || 'Failed to save profile');
+      }
+
+      if (credentialPath && data?.id) {
         await supabase.from('lawyer_credentials').insert({
-          lawyer_id: (data as any).data.id,
+          lawyer_id: data.id,
           credential_type: 'bar_license',
           file_name: credentialFile!.name,
           file_path: credentialPath,
@@ -242,6 +268,11 @@ export default function Join() {
           status: 'pending',
         });
       }
+
+      // Fire-and-forget admin notification
+      supabase.functions
+        .invoke('notify-admin-lawyer-signup', { body: { lawyer: data } })
+        .catch((err) => console.error('Admin notify failed:', err));
 
       localStorage.removeItem('jurist_join_draft');
       toast.success('Application submitted!');
