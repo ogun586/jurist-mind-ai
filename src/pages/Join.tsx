@@ -621,3 +621,77 @@ function ReviewRow({ label, value }: { label: string; value: string }) {
     </div>
   );
 }
+
+function PracticeAreasInput({
+  tags,
+  onChange,
+}: {
+  tags: string[];
+  onChange: (next: string[]) => void;
+}) {
+  const [inputValue, setInputValue] = useState('');
+
+  const addFromString = (raw: string) => {
+    const parts = raw
+      .split(/[,;]/)
+      .map((t) => t.trim())
+      .filter((t) => t.length > 0);
+    if (!parts.length) return;
+    const next = [...tags];
+    for (const p of parts) {
+      if (!next.some((t) => t.toLowerCase() === p.toLowerCase())) next.push(p);
+    }
+    onChange(next);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter' || e.key === ',' || e.key === ';') {
+      e.preventDefault();
+      if (inputValue.trim()) {
+        addFromString(inputValue);
+        setInputValue('');
+      }
+    } else if (e.key === 'Backspace' && !inputValue && tags.length) {
+      onChange(tags.slice(0, -1));
+    }
+  };
+
+  const handleBlur = () => {
+    if (inputValue.trim()) {
+      addFromString(inputValue);
+      setInputValue('');
+    }
+  };
+
+  const remove = (t: string) => onChange(tags.filter((x) => x !== t));
+
+  return (
+    <div className="flex flex-wrap gap-2 p-3 bg-[#1a1a1a] border border-[#262626] rounded-xl min-h-[48px] focus-within:border-[#d4a843] focus-within:ring-1 focus-within:ring-[#d4a843]/30 transition-colors">
+      {tags.map((tag) => (
+        <span
+          key={tag}
+          className="bg-[#d4a843]/10 text-[#d4a843] border border-[#d4a843]/30 rounded-full px-3 py-1 text-xs font-medium flex items-center gap-1.5"
+        >
+          {tag}
+          <button
+            type="button"
+            onClick={() => remove(tag)}
+            className="hover:text-white transition-colors"
+            aria-label={`Remove ${tag}`}
+          >
+            <X className="w-3 h-3" />
+          </button>
+        </span>
+      ))}
+      <input
+        type="text"
+        value={inputValue}
+        onChange={(e) => setInputValue(e.target.value)}
+        onKeyDown={handleKeyDown}
+        onBlur={handleBlur}
+        placeholder={tags.length ? '' : 'e.g. Corporate Law, Criminal Law, Family Law'}
+        className="bg-transparent text-white text-sm flex-1 min-w-[140px] outline-none placeholder:text-[#737373]"
+      />
+    </div>
+  );
+}
