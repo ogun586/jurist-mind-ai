@@ -408,8 +408,14 @@ export default function Join() {
                   <Input className={inputClass} type="number" min={0} value={form.years_experience} onChange={(e) => setForm({ ...form, years_experience: Number(e.target.value) })} />
                 </Field>
               </div>
-              <Field label="Practice Areas (comma-separated)">
-                <Input className={inputClass} value={form.specialization.join(', ')} onChange={(e) => setForm({ ...form, specialization: e.target.value.split(',').map((s) => s.trim()).filter(Boolean) })} placeholder="e.g. Corporate, Litigation, Human Rights" />
+              <Field label="Practice Areas">
+                <PracticeAreasInput
+                  tags={form.specialization}
+                  onChange={(tags) => setForm({ ...form, specialization: tags })}
+                />
+                <p className="text-[11px] text-[#737373] mt-2">
+                  Press Enter, comma, or semicolon to add. Click × to remove.
+                </p>
               </Field>
               <Field label="Short Bio">
                 <Textarea rows={4} className={`${inputClass} h-auto min-h-[120px] py-3`} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder="A brief introduction shown on your public profile..." />
