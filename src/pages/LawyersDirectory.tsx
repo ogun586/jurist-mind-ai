@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
-import { Users, Search, Globe, MapPin, Send, Check, Loader2, Shield, Briefcase, Filter, Star, ArrowRight } from "lucide-react";
+import { Users, Search, Globe, MapPin, Send, Check, Loader2, Shield, Briefcase, Filter, Star, ArrowRight, Scale, Calendar, ShieldCheck, Building2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -30,6 +30,28 @@ interface LawyerRow {
   total_ratings: number | null;
 }
 
+interface FirmRow {
+  id: string;
+  name: string;
+  slug: string | null;
+  logo_url: string | null;
+  description: string | null;
+  city: string | null;
+  state: string | null;
+  country: string | null;
+  is_priority_partner: boolean | null;
+  is_verified: boolean | null;
+  brand_accent_color: string | null;
+  member_count?: number;
+  rating?: number;
+  total_ratings?: number;
+  practice_areas?: string[];
+}
+
+type DirectoryItem =
+  | { kind: "firm"; firm: FirmRow }
+  | { kind: "lawyer"; lawyer: LawyerRow & { avatar_url?: string | null; firm_name?: string | null } };
+
 export default function LawyersDirectory() {
   const { user, profile } = useAuth();
   const navigate = useNavigate();
@@ -38,6 +60,8 @@ export default function LawyersDirectory() {
   const { countries } = useAllCountries();
 
   const [lawyers, setLawyers] = useState<LawyerRow[]>([]);
+  const [firms, setFirms] = useState<FirmRow[]>([]);
+  const [lawyerExtras, setLawyerExtras] = useState<Record<string, { avatar_url?: string | null; firm_name?: string | null }>>({});
   const [loading, setLoading] = useState(true);
   const [selectedCountryId, setSelectedCountryId] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
@@ -55,7 +79,10 @@ export default function LawyersDirectory() {
   }, [countryId]);
 
   useEffect(() => {
-    if (selectedCountryId) fetchLawyers(selectedCountryId);
+    if (selectedCountryId) {
+      fetchLawyers(selectedCountryId);
+      fetchFirms(selectedCountryId);
+    }
   }, [selectedCountryId]);
 
   useEffect(() => {
@@ -80,17 +107,40 @@ export default function LawyersDirectory() {
     setLoading(true);
     try {
       const { data, error } = await (supabase.from as any)("lawyers")
-        .select("id, user_id, specialization, years_experience, description, city, verified, is_available, hourly_rate, bar_number, name, country_id_ref, rating, total_ratings")
+        .select("id, user_id, specialization, years_experience, description, city, verified, is_available, hourly_rate, bar_number, name, country_id_ref, rating, total_ratings, avatar_url, firm_name")
         .eq("country_id_ref", cId)
         .eq("verified", true)
         .eq("is_available", true);
       if (error) throw error;
       setLawyers(data || []);
+      const extras: Record<string, any> = {};
+      (data || []).forEach((l: any) => { extras[l.id] = { avatar_url: l.avatar_url, firm_name: l.firm_name }; });
+      setLawyerExtras(extras);
     } catch (e: any) {
       console.error(e);
     } finally {
       setLoading(false);
     }
+  }
+
+  async function fetchFirms(cId: string) {
+    try {
+      const { data, error } = await (supabase.from as any)("firms")
+        .select("id, name, slug, logo_url, description, city, state, country, is_priority_partner, is_verified, brand_accent_color")
+        .eq("country_id_ref", cId);
+      if (error) throw error;
+      const firmsList: FirmRow[] = data || [];
+      // Fetch member counts
+      if (firmsList.length) {
+        const ids = firmsList.map(f => f.id);
+        const { data: members } = await (supabase.from as any)("firm_members")
+          .select("firm_id").in("firm_id", ids);
+        const counts: Record<string, number> = {};
+        (members || []).forEach((m: any) => { counts[m.firm_id] = (counts[m.firm_id] || 0) + 1; });
+        firmsList.forEach(f => { f.member_count = counts[f.id] || 0; });
+      }
+      setFirms(firmsList);
+    } catch (e) { console.error(e); }
   }
 
   async function fetchSentRequests() {
@@ -144,6 +194,24 @@ export default function LawyersDirectory() {
     const matchSpec = !selectedSpec || (l.specialization || []).includes(selectedSpec);
     return matchSearch && matchSpec;
   }), [lawyers, searchTerm, selectedSpec]);
+
+  const filteredFirms = useMemo(() => firms.filter((f) => {
+    if (selectedSpec) return false; // firms don't expose specs here
+    if (!searchTerm) return true;
+    const s = searchTerm.toLowerCase();
+    return f.name.toLowerCase().includes(s) || (f.description || "").toLowerCase().includes(s) || (f.city || "").toLowerCase().includes(s);
+  }), [firms, searchTerm, selectedSpec]);
+
+  const items: DirectoryItem[] = useMemo(() => {
+    const firmItems: DirectoryItem[] = [...filteredFirms]
+      .sort((a, b) => Number(b.is_priority_partner) - Number(a.is_priority_partner))
+      .map((f) => ({ kind: "firm" as const, firm: f }));
+    const lawyerItems: DirectoryItem[] = filtered.map((l) => ({
+      kind: "lawyer" as const,
+      lawyer: { ...l, ...(lawyerExtras[l.id] || {}) },
+    }));
+    return [...firmItems, ...lawyerItems];
+  }, [filtered, filteredFirms, lawyerExtras]);
 
   const selectedCountryName = countries.find((c) => c.id === selectedCountryId)?.name || userCountry || "";
 
@@ -285,122 +353,29 @@ export default function LawyersDirectory() {
               <Skeleton key={i} className="h-64 rounded-2xl bg-[#1a1a1a]" />
             ))}
           </div>
-        ) : filtered.length === 0 ? (
+        ) : items.length === 0 ? (
           <div className="text-center py-20 rounded-2xl border border-[#262626] bg-[#141414]">
             <div className="w-14 h-14 rounded-2xl bg-[#1a1a1a] border border-[#262626] mx-auto mb-4 flex items-center justify-center">
               <Users className="w-6 h-6 text-[#737373]" />
             </div>
-            <h3 className="text-lg font-semibold text-white mb-1">No verified lawyers</h3>
+            <h3 className="text-lg font-semibold text-white mb-1">No results</h3>
             <p className="text-[#a3a3a3] text-sm">
-              No verified lawyers listed in {selectedCountryName} yet.
+              No verified lawyers or firms listed in {selectedCountryName} yet.
             </p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
-            {filtered.map((lawyer) => {
-              const topRated = (lawyer.rating || 0) >= 4.5 && (lawyer.total_ratings || 0) >= 5;
-              const initials = lawyer.name.split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase();
-              return (
-                <div
-                  key={lawyer.id}
-                  onClick={() => navigate(`/lawyers/${lawyer.id}`)}
-                  className="group relative p-6 rounded-2xl border border-[#262626] bg-[#141414] hover:bg-[#1a1a1a] hover:border-[#333333] hover:-translate-y-0.5 transition-all duration-300 cursor-pointer flex flex-col"
-                >
-                  {topRated && (
-                    <div className="absolute top-4 right-4 inline-flex items-center gap-1 px-2 py-1 rounded-full bg-[#d4a843]/10 border border-[#d4a843]/30">
-                      <Star className="w-3 h-3 fill-[#d4a843] text-[#d4a843]" />
-                      <span className="text-[10px] font-bold text-[#d4a843] uppercase tracking-wider">Top</span>
-                    </div>
-                  )}
-
-                  <div className="flex items-start gap-4">
-                    <div className="w-14 h-14 rounded-2xl bg-[#1a1a1a] ring-2 ring-[#262626] flex items-center justify-center text-white font-semibold text-base shrink-0">
-                      {initials}
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <h3 className="font-semibold text-white truncate" style={{ letterSpacing: "-0.01em" }}>
-                        {lawyer.name}
-                      </h3>
-                      <div className="flex items-center gap-2 mt-1 text-xs">
-                        {(lawyer.rating || 0) > 0 ? (
-                          <span className="flex items-center gap-1">
-                            <Star className="w-3 h-3 fill-[#d4a843] text-[#d4a843]" />
-                            <span className="text-white font-semibold">{lawyer.rating?.toFixed(1)}</span>
-                            <span className="text-[#737373]">({lawyer.total_ratings})</span>
-                          </span>
-                        ) : (
-                          <span className="text-[#737373]">New profile</span>
-                        )}
-                      </div>
-                      <div className="flex items-center gap-3 mt-1 text-xs text-[#a3a3a3]">
-                        {lawyer.city && (
-                          <span className="flex items-center gap-1">
-                            <MapPin className="w-3 h-3 text-[#737373]" /> {lawyer.city}
-                          </span>
-                        )}
-                        {lawyer.years_experience > 0 && (
-                          <span className="flex items-center gap-1">
-                            <Briefcase className="w-3 h-3 text-[#737373]" /> {lawyer.years_experience}y
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-
-                  {lawyer.specialization?.length > 0 && (
-                    <div className="flex flex-wrap gap-1.5 mt-4">
-                      {lawyer.specialization.slice(0, 3).map((s) => (
-                        <span
-                          key={s}
-                          className="text-xs font-medium px-3 py-1.5 rounded-lg bg-[#1a1a1a] text-[#a3a3a3] border border-[#262626] group-hover:border-[#333333]"
-                        >
-                          {s}
-                        </span>
-                      ))}
-                      {lawyer.specialization.length > 3 && (
-                        <span className="text-xs font-medium px-3 py-1.5 rounded-lg bg-[#1a1a1a] text-[#737373] border border-[#262626]">
-                          +{lawyer.specialization.length - 3}
-                        </span>
-                      )}
-                    </div>
-                  )}
-
-                  {lawyer.description && (
-                    <p className="text-sm text-[#a3a3a3] mt-4 line-clamp-2 leading-relaxed">
-                      {lawyer.description}
-                    </p>
-                  )}
-
-                  <div className="mt-5 pt-5 border-t border-[#262626] flex items-center gap-2">
-                    {sentRequests.has(lawyer.id) ? (
-                      <Button
-                        size="sm"
-                        disabled
-                        className="flex-1 h-10 rounded-xl bg-[#1a1a1a] text-[#22c55e] border border-[#22c55e]/20 hover:bg-[#1a1a1a]"
-                      >
-                        <Check className="w-4 h-4 mr-1.5" /> Request Sent
-                      </Button>
-                    ) : (
-                      <Button
-                        size="sm"
-                        onClick={(e) => { e.stopPropagation(); setConnectingLawyer(lawyer); }}
-                        className="flex-1 h-10 rounded-xl bg-[#d4a843] text-black font-semibold hover:bg-[#e6c060] active:scale-[0.98] transition-all"
-                      >
-                        <Send className="w-4 h-4 mr-1.5" /> Connect
-                      </Button>
-                    )}
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={(e) => { e.stopPropagation(); navigate(`/lawyers/${lawyer.id}`); }}
-                      className="h-10 rounded-xl bg-transparent border-[#333333] text-white hover:bg-[#1a1a1a] hover:border-[#d4a843] hover:text-white"
-                    >
-                      View <ArrowRight className="w-4 h-4 ml-1" />
-                    </Button>
-                  </div>
-                </div>
-              );
-            })}
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+            {items.map((it) => it.kind === "firm" ? (
+              <FirmCard key={`f-${it.firm.id}`} firm={it.firm} onView={() => navigate(`/firms/${it.firm.slug || it.firm.id}`)} />
+            ) : (
+              <LawyerDirectoryCard
+                key={`l-${it.lawyer.id}`}
+                lawyer={it.lawyer}
+                sent={sentRequests.has(it.lawyer.id)}
+                onConnect={() => setConnectingLawyer(it.lawyer)}
+                onView={() => navigate(`/lawyers/${it.lawyer.id}`)}
+              />
+            ))}
           </div>
         )}
 
@@ -447,5 +422,223 @@ function Stat({
         {value}
       </span>
     </div>
+  );
+}
+
+function Stars({ rating }: { rating: number }) {
+  return (
+    <div className="flex gap-0.5">
+      {Array.from({ length: 5 }).map((_, i) => (
+        <Star
+          key={i}
+          className={`w-3.5 h-3.5 ${i < Math.round(rating) ? "fill-[#d4a843] text-[#d4a843]" : "text-[#262626]"}`}
+        />
+      ))}
+    </div>
+  );
+}
+
+function CardShell({ children, accentColor, onClick }: { children: React.ReactNode; accentColor?: string; onClick?: () => void }) {
+  return (
+    <div
+      onClick={onClick}
+      className="group relative overflow-hidden rounded-2xl border border-[#262626] bg-[#111111] hover:border-[#333333] hover:-translate-y-0.5 transition-all duration-300 cursor-pointer flex flex-col"
+    >
+      {accentColor && (
+        <div className="absolute top-0 left-0 right-0 h-[2px]" style={{ background: accentColor }} />
+      )}
+      <div className="p-6 flex flex-col gap-4 flex-1">{children}</div>
+    </div>
+  );
+}
+
+function FooterRow({ available = true }: { available?: boolean }) {
+  return (
+    <div className="flex items-center justify-between mt-1 pt-3 border-t border-[#1a1a1a]">
+      <div className="flex items-center gap-1.5 text-[11px] font-medium text-[#22c55e]">
+        <span className="w-1.5 h-1.5 rounded-full bg-[#22c55e]" />
+        {available ? "Available Now" : "Unavailable"}
+      </div>
+      <div className="flex items-center gap-1.5 text-[11px] text-[#737373]">
+        <Shield className="w-3 h-3" />
+        Verified by JuristMind
+      </div>
+    </div>
+  );
+}
+
+function FirmCard({ firm, onView }: { firm: FirmRow; onView: () => void }) {
+  const accent = firm.brand_accent_color || "#d4a843";
+  const rating = firm.rating ?? 0;
+  const totalRatings = firm.total_ratings ?? 0;
+  return (
+    <CardShell accentColor={accent} onClick={onView}>
+      {firm.is_priority_partner && (
+        <div
+          className="absolute top-4 right-4 px-2.5 py-1 rounded text-[9px] font-bold uppercase tracking-[0.08em]"
+          style={{ background: "#d4a843", color: "#0a0a0a" }}
+        >
+          Priority Partner
+        </div>
+      )}
+
+      <div className="flex items-start gap-4">
+        <div className="w-14 h-14 rounded-xl bg-[#1a1a1a] border border-[#262626] flex items-center justify-center overflow-hidden shrink-0">
+          {firm.logo_url ? (
+            <img src={firm.logo_url} alt={firm.name} className="w-full h-full object-contain p-1.5" />
+          ) : (
+            <Scale className="w-6 h-6 text-[#d4a843]" />
+          )}
+        </div>
+        <div className="flex-1 min-w-0 pr-20">
+          <h3 className="text-white font-semibold text-base leading-tight truncate">{firm.name}</h3>
+          <p className="text-[#737373] text-xs mt-1">Full Service Law Firm</p>
+          <div className="flex items-center gap-2 mt-2">
+            <Stars rating={rating} />
+            <span className="text-xs">
+              <span className="text-white font-semibold">{rating.toFixed(1)}</span>{" "}
+              <span className="text-[#737373]">({totalRatings})</span>
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <div className="flex items-center gap-4 text-xs text-[#737373]">
+        {(firm.city || firm.state) && (
+          <span className="flex items-center gap-1.5">
+            <MapPin className="w-3 h-3" /> {[firm.city, firm.state].filter(Boolean).join(", ")}
+          </span>
+        )}
+        <span className="flex items-center gap-1.5">
+          <Users className="w-3 h-3" /> {firm.member_count || 0} {firm.member_count === 1 ? "Lawyer" : "Lawyers"} Available
+        </span>
+      </div>
+
+      {firm.description && (
+        <p className="text-[13px] text-[#737373] leading-relaxed line-clamp-3">{firm.description}</p>
+      )}
+
+      <div className="flex gap-3 mt-auto">
+        <Button
+          onClick={(e) => { e.stopPropagation(); onView(); }}
+          className="flex-1 h-10 rounded-lg bg-[#d4a843] text-black hover:bg-[#e8c566] text-[13px] font-medium active:scale-[0.97]"
+        >
+          <Calendar className="w-4 h-4 mr-1.5" /> Book Consultation
+        </Button>
+        <Button
+          onClick={(e) => { e.stopPropagation(); onView(); }}
+          variant="outline"
+          className="flex-1 h-10 rounded-lg bg-transparent border-[#333333] text-white hover:bg-transparent hover:border-[#d4a843] hover:text-[#d4a843] text-[13px] font-medium"
+        >
+          View Profile <ArrowRight className="w-4 h-4 ml-1.5" />
+        </Button>
+      </div>
+
+      <FooterRow available />
+    </CardShell>
+  );
+}
+
+function LawyerDirectoryCard({
+  lawyer, sent, onConnect, onView,
+}: {
+  lawyer: LawyerRow & { avatar_url?: string | null; firm_name?: string | null };
+  sent: boolean;
+  onConnect: () => void;
+  onView: () => void;
+}) {
+  const initials = lawyer.name.split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase();
+  const rating = lawyer.rating || 0;
+  return (
+    <CardShell accentColor="#d4a843" onClick={onView}>
+      <div className="flex items-start gap-4">
+        <div className="w-14 h-14 rounded-xl bg-[#1a1a1a] border border-[#262626] flex items-center justify-center overflow-hidden shrink-0">
+          {lawyer.avatar_url ? (
+            <img src={lawyer.avatar_url} alt={lawyer.name} className="w-full h-full object-cover" />
+          ) : (
+            <span className="text-[#a3a3a3] font-semibold text-lg">{initials}</span>
+          )}
+        </div>
+        <div className="flex-1 min-w-0">
+          <h3 className="text-white font-semibold text-base leading-tight truncate">{lawyer.name}</h3>
+          {lawyer.firm_name && (
+            <p className="text-[#737373] text-xs mt-1 truncate">
+              Managing Partner at <span className="text-[#d4a843]">{lawyer.firm_name}</span>
+            </p>
+          )}
+          <div className="flex items-center gap-2 mt-2">
+            <Stars rating={rating} />
+            <span className="text-xs">
+              <span className="text-white font-semibold">{rating > 0 ? rating.toFixed(1) : "—"}</span>{" "}
+              <span className="text-[#737373]">({lawyer.total_ratings || 0})</span>
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <div className="flex items-center gap-4 text-xs text-[#737373] flex-wrap">
+        {lawyer.city && (
+          <span className="flex items-center gap-1.5">
+            <MapPin className="w-3 h-3" /> {lawyer.city}
+          </span>
+        )}
+        {lawyer.years_experience > 0 && (
+          <span className="flex items-center gap-1.5">
+            <Briefcase className="w-3 h-3" /> {lawyer.years_experience}+ years
+          </span>
+        )}
+        {lawyer.verified && (
+          <span className="flex items-center gap-1.5 text-[#22c55e] font-medium">
+            <ShieldCheck className="w-3 h-3" /> Verified
+          </span>
+        )}
+      </div>
+
+      {lawyer.specialization?.length > 0 && (
+        <div className="flex flex-wrap gap-2">
+          {lawyer.specialization.slice(0, 3).map((s) => (
+            <span key={s} className="text-[11px] px-3 py-1 rounded-md border border-[#333333] text-[#a3a3a3]">
+              {s}
+            </span>
+          ))}
+          {lawyer.specialization.length > 3 && (
+            <span className="text-[11px] px-3 py-1 rounded-md border border-[#333333] text-[#d4a843]">
+              +{lawyer.specialization.length - 3} more
+            </span>
+          )}
+        </div>
+      )}
+
+      {lawyer.description && (
+        <p className="text-[13px] text-[#737373] leading-relaxed line-clamp-3">{lawyer.description}</p>
+      )}
+
+      <div className="flex gap-3 mt-auto">
+        {sent ? (
+          <Button
+            disabled
+            className="flex-1 h-10 rounded-lg bg-[#1a1a1a] text-[#22c55e] border border-[#22c55e]/30 hover:bg-[#1a1a1a] text-[13px] font-medium"
+          >
+            <Check className="w-4 h-4 mr-1.5" /> Request Sent
+          </Button>
+        ) : (
+          <Button
+            onClick={(e) => { e.stopPropagation(); onConnect(); }}
+            className="flex-1 h-10 rounded-lg bg-[#d4a843] text-black hover:bg-[#e8c566] text-[13px] font-medium active:scale-[0.97]"
+          >
+            <Calendar className="w-4 h-4 mr-1.5" /> Book Consultation
+          </Button>
+        )}
+        <Button
+          onClick={(e) => { e.stopPropagation(); onView(); }}
+          variant="outline"
+          className="flex-1 h-10 rounded-lg bg-transparent border-[#333333] text-white hover:bg-transparent hover:border-[#d4a843] hover:text-[#d4a843] text-[13px] font-medium"
+        >
+          View Profile <ArrowRight className="w-4 h-4 ml-1.5" />
+        </Button>
+      </div>
+
+      <FooterRow available={lawyer.is_available} />
+    </CardShell>
   );
 }
