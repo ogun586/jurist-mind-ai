@@ -1,8 +1,5 @@
 import { Star, MapPin, Mail, Phone, MessageSquare, CheckCircle2, Clock, Circle } from "lucide-react";
-import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 
@@ -32,7 +29,7 @@ interface LawyerCardProps {
 
 export function LawyerCard({ lawyer }: LawyerCardProps) {
   const navigate = useNavigate();
-  
+
   const getInitials = (name: string) => {
     return name
       .split(' ')
@@ -48,8 +45,8 @@ export function LawyerCard({ lawyer }: LawyerCardProps) {
         key={i}
         className={`w-3.5 h-3.5 ${
           i < Math.floor(rating)
-            ? 'fill-amber-400 text-amber-400'
-            : 'text-muted-foreground/30'
+            ? 'fill-[#d4a843] text-[#d4a843]'
+            : 'text-[#333333]'
         }`}
       />
     ));
@@ -58,11 +55,11 @@ export function LawyerCard({ lawyer }: LawyerCardProps) {
   const getStatusColor = (status?: string) => {
     switch (status) {
       case 'online':
-        return 'bg-emerald-500';
+        return 'bg-[#22c55e]';
       case 'busy':
-        return 'bg-amber-500';
+        return 'bg-[#d4a843]';
       default:
-        return 'bg-muted-foreground/40';
+        return 'bg-[#737373]';
     }
   };
 
@@ -77,108 +74,104 @@ export function LawyerCard({ lawyer }: LawyerCardProps) {
     }
   };
 
-  const accentColor = lawyer.brand_accent_color || 'hsl(var(--primary))';
+  const accentColor = lawyer.brand_accent_color || '#d4a843';
 
   return (
-    <Card 
-      className="group relative overflow-hidden transition-all duration-300 hover:shadow-xl hover:-translate-y-1 cursor-pointer border-border/50 bg-card"
+    <div
+      className="group relative overflow-hidden rounded-2xl border border-[#262626] bg-[#111111] hover:bg-[#1a1a1a] hover:border-[#333333] hover:-translate-y-1 transition-all duration-300 cursor-pointer"
       onClick={() => navigate(`/lawyers/${lawyer.slug || lawyer.id}`)}
     >
-      {/* Accent line */}
-      <div 
-        className="absolute top-0 left-0 right-0 h-1"
+      <div
+        className="absolute top-0 left-0 right-0 h-[2px]"
         style={{ backgroundColor: accentColor }}
       />
-      
-      <CardContent className="p-5">
-        {/* Header with Avatar and Basic Info */}
+
+      <div className="p-6">
         <div className="flex items-start gap-4 mb-4">
           <div className="relative">
-            <Avatar className="w-16 h-16 ring-2 ring-border shadow-md">
-              <AvatarImage src={lawyer.avatar_url} alt={lawyer.name} />
-              <AvatarFallback 
-                className="text-lg font-semibold"
-                style={{ backgroundColor: accentColor, color: 'white' }}
+            {lawyer.avatar_url ? (
+              <img
+                src={lawyer.avatar_url}
+                alt={lawyer.name}
+                className="w-16 h-16 rounded-2xl object-cover border border-[#262626] bg-[#1a1a1a]"
+              />
+            ) : (
+              <div
+                className="w-16 h-16 rounded-2xl flex items-center justify-center text-black text-lg font-semibold border border-[#262626]"
+                style={{ backgroundColor: accentColor }}
               >
                 {getInitials(lawyer.name)}
-              </AvatarFallback>
-            </Avatar>
-            {/* Status indicator */}
-            <div className={`absolute bottom-0 right-0 w-4 h-4 rounded-full border-2 border-card ${getStatusColor(lawyer.availability_status)}`} />
+              </div>
+            )}
+            <div className={`absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full border-2 border-[#111111] ${getStatusColor(lawyer.availability_status)} ${lawyer.availability_status === 'online' ? 'animate-pulse-subtle' : ''}`} />
           </div>
-          
+
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-1">
-              <h3 className="font-semibold text-foreground truncate">{lawyer.name}</h3>
+              <h3 className="font-semibold text-white truncate tracking-tight">{lawyer.name}</h3>
               {lawyer.verification_status === 'verified' && (
-                <div className="flex items-center gap-1 px-2 py-0.5 bg-emerald-100 dark:bg-emerald-900/30 rounded-full">
-                  <CheckCircle2 className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
-                  <span className="text-[10px] font-medium text-emerald-700 dark:text-emerald-400">Verified</span>
+                <div className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#22c55e]/10 border border-[#22c55e]/20">
+                  <CheckCircle2 className="w-3 h-3 text-[#22c55e]" />
+                  <span className="text-[10px] font-semibold text-[#22c55e] uppercase tracking-wider">Verified</span>
                 </div>
               )}
             </div>
-            
+
             {lawyer.firm_name && (
-              <p className="text-sm text-muted-foreground truncate mb-1">{lawyer.firm_name}</p>
+              <p className="text-sm text-[#a3a3a3] truncate mb-1">{lawyer.firm_name}</p>
             )}
-            
-            <div className="flex items-center gap-1 text-xs text-muted-foreground">
-              <Circle className={`w-2 h-2 fill-current ${getStatusColor(lawyer.availability_status).replace('bg-', 'text-')}`} />
+
+            <div className="flex items-center gap-1.5 text-xs text-[#737373]">
+              <span className={`inline-block w-2 h-2 rounded-full ${getStatusColor(lawyer.availability_status)}`} />
               <span>{getStatusText(lawyer.availability_status)}</span>
             </div>
           </div>
         </div>
 
-        {/* Rating */}
         <div className="flex items-center gap-2 mb-3">
           <div className="flex items-center gap-0.5">{renderStars(lawyer.rating)}</div>
-          <span className="text-sm font-medium text-foreground">{lawyer.rating.toFixed(1)}</span>
-          <span className="text-xs text-muted-foreground">({lawyer.total_ratings} reviews)</span>
+          <span className="text-sm font-semibold text-white">{lawyer.rating.toFixed(1)}</span>
+          <span className="text-xs text-[#737373]">({lawyer.total_ratings} reviews)</span>
         </div>
 
-        {/* Description */}
         {lawyer.description && (
-          <p className="text-sm text-muted-foreground line-clamp-2 mb-3">
+          <p className="text-sm text-[#a3a3a3] line-clamp-2 mb-3 leading-relaxed">
             {lawyer.description}
           </p>
         )}
 
-        {/* Location & Experience */}
-        <div className="flex items-center gap-4 text-xs text-muted-foreground mb-4">
+        <div className="flex items-center gap-4 text-xs text-[#a3a3a3] mb-4">
           <div className="flex items-center gap-1.5">
-            <MapPin className="w-3.5 h-3.5" />
+            <MapPin className="w-3.5 h-3.5 text-[#737373]" />
             <span>{lawyer.city ? `${lawyer.city}, ${lawyer.state}` : lawyer.state}</span>
           </div>
           <div className="flex items-center gap-1.5">
-            <Clock className="w-3.5 h-3.5" />
+            <Clock className="w-3.5 h-3.5 text-[#737373]" />
             <span>{lawyer.years_experience} years</span>
           </div>
         </div>
 
-        {/* Specializations */}
         <div className="flex flex-wrap gap-1.5 mb-4">
           {lawyer.specialization.slice(0, 3).map((spec, index) => (
-            <Badge 
-              key={index} 
-              variant="secondary" 
-              className="text-[10px] px-2 py-0.5 bg-muted/50"
+            <span
+              key={index}
+              className="text-[11px] font-medium px-2.5 py-1 rounded-md bg-[#1a1a1a] text-[#a3a3a3] border border-[#262626]"
             >
               {spec}
-            </Badge>
+            </span>
           ))}
           {lawyer.specialization.length > 3 && (
-            <Badge variant="outline" className="text-[10px] px-2 py-0.5">
+            <span className="text-[11px] font-medium px-2.5 py-1 rounded-md bg-[#1a1a1a] text-[#737373] border border-[#262626]">
               +{lawyer.specialization.length - 3}
-            </Badge>
+            </span>
           )}
         </div>
 
-        {/* Action Buttons */}
-        <div className="flex gap-2 pt-3 border-t border-border/50">
+        <div className="flex gap-2 pt-4 border-t border-[#262626]">
           <Button
             variant="outline"
             size="sm"
-            className="flex-1 h-9 text-xs"
+            className="flex-1 h-10 rounded-xl bg-transparent border-[#262626] text-white hover:bg-[#1a1a1a] hover:border-[#d4a843] hover:text-[#d4a843] text-xs active:scale-[0.97]"
             onClick={(e) => {
               e.stopPropagation();
               if (lawyer.email) {
@@ -192,7 +185,7 @@ export function LawyerCard({ lawyer }: LawyerCardProps) {
           <Button
             variant="outline"
             size="sm"
-            className="flex-1 h-9 text-xs"
+            className="flex-1 h-10 rounded-xl bg-transparent border-[#262626] text-white hover:bg-[#1a1a1a] hover:border-[#d4a843] hover:text-[#d4a843] text-xs active:scale-[0.97]"
             onClick={(e) => {
               e.stopPropagation();
               if (lawyer.phone) {
@@ -206,7 +199,7 @@ export function LawyerCard({ lawyer }: LawyerCardProps) {
             Call
           </Button>
         </div>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }
