@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
+import SearchHero from "@/components/lawyers/SearchHero";
 import { Users, Search, Globe, MapPin, Send, Check, Loader2, Shield, Briefcase, Filter, Star, ArrowRight, Scale, Calendar, ShieldCheck, Building2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
