@@ -248,25 +248,7 @@ export default function LawyersDirectory() {
       </div>
 
       <div className="max-w-7xl mx-auto p-4 md:p-6">
-        {/* Hero */}
-        <div className="mb-8 pt-2">
-          <p className="text-[11px] uppercase tracking-[0.2em] text-[#737373] mb-3">
-            Verified Legal Professionals
-          </p>
-          <h1 className="text-3xl md:text-5xl font-semibold text-white tracking-tight" style={{ letterSpacing: "-0.02em" }}>
-            Connect with a Lawyer
-          </h1>
-          <p className="mt-3 text-[#a3a3a3] text-sm md:text-base max-w-2xl leading-relaxed">
-            Discover trusted lawyers and firms across {selectedCountryName}. Vetted credentials, transparent ratings, direct contact.
-          </p>
-
-          {/* Stat strip */}
-          <div className="mt-6 grid grid-cols-3 max-w-xl gap-px rounded-2xl overflow-hidden border border-[#262626] bg-[#262626]">
-            <Stat label="Online Now" value={onlineCount} accent dot />
-            <Stat label="Top Rated" value={topRatedCount} icon={<Star className="w-3.5 h-3.5 text-[#d4a843]" />} />
-            <Stat label={uniqueCities === 1 ? "City" : "Cities"} value={uniqueCities} icon={<MapPin className="w-3.5 h-3.5 text-[#737373]" />} />
-          </div>
-        </div>
+        <SearchHero />
 
         {/* Search Row */}
         <div className="flex flex-col md:flex-row gap-3 mb-4">
